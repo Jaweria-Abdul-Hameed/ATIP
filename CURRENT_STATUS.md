@@ -17,6 +17,7 @@
 | 2026-10-19 11:10 | M0-03..07, M0-WB-01..02 | All 12 application routes (`/app`, `/app/repositories`, `/app/repositories/[id]`, `/app/risk`, `/app/coverage`, `/app/test-plans`, `/app/runs`, `/app/runs/[id]`, `/app/analysis`, `/app/reports`, `/app/settings`, `/sign-in`) | `Invoke-WebRequest` to all 12 endpoints on `http://localhost:3000`. Every route returned HTTP 200. Root `/` returned HTTP 307 redirect to `/app`. Exit code 0 | verified |
 | 2026-10-19 11:20 | M0-09, M0-WB-03 | Visual inspection and automated browser screenshot capture | Automated Headless Chrome runner via `scripts/capture_screenshots.mjs`. 12 Light Mode screenshots, 12 Dark Mode screenshots, 2 Mobile Responsive screenshots captured under `artifacts/ui/`. Inspected against approved PNGs. Visual parity verified. Exit code 0 | verified |
 | 2026-10-19 17:23 | M0-TYPO | Typography refinement: Source Serif 4 headlines & Figtree body | Bundled self-contained WOFF2 webfonts (`SourceSerif4-Regular.woff2`, `Figtree-Regular.woff2`) in `apps/web/public/fonts/`. Configured `@font-face` rules and strict `-0.035em` kerning. Recompiled Next.js production build (`pnpm --filter @atip/web build` -> 14/14 static pages). Re-captured 28 screenshots under `artifacts/ui/`. Verified high-contrast serif headlines matching user mockup. | 2c6d0fd |
+| 2026-10-19 17:50 | M0-AUTH | Dedicated Sign-In, Sign-Up, and Forgot Password views | Built separate `/sign-in` (GitHub, Google, Email, SSO, Quick pass), `/sign-up` (GitHub, Google, Org, Terms, Quick pass), and `/forgot-password` (Reset email flow, workspace link). Lockout-prevention guaranteed. Compiled Next.js build (`16/16` static pages). Captured 32 screenshots in light & dark mode. | verified |
 
 ## UI preview handoff
 - URL: `http://localhost:3000/app` (running)
@@ -64,6 +65,10 @@
   - `artifacts/ui/11_Settings_dark.png`
   - `artifacts/ui/12_Sign_In_light.png`
   - `artifacts/ui/12_Sign_In_dark.png`
+  - `artifacts/ui/13_Sign_Up_light.png`
+  - `artifacts/ui/13_Sign_Up_dark.png`
+  - `artifacts/ui/14_Forgot_Password_light.png`
+  - `artifacts/ui/14_Forgot_Password_dark.png`
 - Known UI defects: None. All routes, navigation links, modals, tabs, theme toggles, and filters function cleanly.
 
 ## External setup needed (only if encountered)

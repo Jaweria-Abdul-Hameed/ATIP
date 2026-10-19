@@ -22,6 +22,8 @@ const routes = [
   { name: "10_Reports", path: "/app/reports" },
   { name: "11_Settings", path: "/app/settings" },
   { name: "12_Sign_In", path: "/sign-in" },
+  { name: "13_Sign_Up", path: "/sign-up" },
+  { name: "14_Forgot_Password", path: "/forgot-password" },
 ];
 
 async function main() {
