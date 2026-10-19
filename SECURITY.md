@@ -1,0 +1,22 @@
+# Security, safety and approvals — mandatory implementation rules
+
+- Organization scope enforced at API and data-access layers, not frontend-only. Test horizontal and vertical authorization, IDOR and org-switch cases.
+- Use OIDC provider; HTTP-only secure SameSite cookies, CSRF defenses, TLS, CORS allowlist, rate limits. Never implement home-grown password storage.
+- GitHub App credentials installation-scoped; verify webhook HMAC signature on raw body, reject replay, deduplicate delivery IDs, minimize scopes. Encrypt tokens and rotate; redact logs.
+- Repository files, README, commits, test output and prompts are **untrusted input**. Prompt injection must not override tool policy, read secrets or bypass approvals.
+- Private source to external LLMs requires explicit organization consent; minimize/redact source; allow disablement and provider controls. Never store API keys in client, fixtures or Git.
+- Read-only mining/risk/reporting may be automatic. Running repository code requires sandbox policy; creating PRs, modifying repositories, widening permissions and other privileged actions require **human approval enforced server-side**. An AI agent cannot approve its own action.
+- Execution only in hardened ephemeral isolation (prefer microVM/gVisor/Kata or comparably validated isolation); non-root, no privileged containers, read-only base, isolated filesystem, resource/time/pid quotas, default-deny network, no platform credentials or Docker socket. Do not treat a plain Docker container as an adequate production security boundary. If no safe runner exists, execution stays disabled with an explanatory UI state.
+- Use signed URLs with short expiry for artifacts; audit all sensitive actions; retention and deletion policies; encrypt in transit and at rest; backup/restore test.
+- Security test suite: tenant crossover, webhook forgery/replay, prompt injection, dependency-script abuse, secret exfiltration, cancellation race, malicious artifacts, policy bypass, sandbox isolation tests. Never perform intrusive tests against third parties.
+- Development agent may automate reversible local work. Human intervention for secrets, paid services, GitHub installation, cloud resources, repo-changing actions and potentially destructive commands; provide exact instructions without requesting secrets in chat.
+
+## ML data governance
+Training datasets and model artifacts are tenant-sensitive. Use only authorized repository history, enforce per-organization consent and isolation, redact secrets/PII, record data lineage and retention/deletion policy, and do not pool private tenant code or labels across organizations without explicit permission. Treat model artifacts as untrusted inputs, verify integrity and use safe serialization/loading. Never leak source or labels to external training/model providers without authorization.
+
+## White-box execution and generated-test safeguards
+- Treat AST parsing, dependency metadata, fixtures, test generators, mutation operators, test names and generated code as untrusted. Static analysis is bounded for CPU, memory, recursion, graph size and parser timeouts; no import-time or module-evaluation side effects in the control plane.
+- Condition/MC/DC instrumentation and mutation engines may transform code but must never execute transformed source outside approved hardened sandbox. Preserve source SHA, transformations, generated test diffs, instrumentation versions and logs as auditable artifacts.
+- All generate, approve, run, rerun, cancel and export actions require server-side organization-scoped RBAC, rate limits, resource budgets, cancellation and idempotency. Generated tests must not silently push commits or PRs; user approval before repo writes.
+- Default-deny outbound network, no privileged containers, no shared credentials or Docker socket, isolated ephemeral filesystem, resource/time/process quotas, log redaction, signed artifacts, malicious test fixtures and mutation-run isolation tests. Plain Docker alone is not proof of production-grade isolation.
+- MC/DC, data-flow and path coverage claims are safety-relevant evidence: retain provenance and tool capability, never turn missing instrumentation into a passing metric. Human intervention for unavailable hardened runner, provider credentials, private repo authorization, paid infrastructure or production model promotion; exact steps without collecting secrets in chat.

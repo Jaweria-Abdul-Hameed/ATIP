@@ -1,0 +1,11 @@
+ATIP FINAL AUTONOMOUS BUILD — START HERE
+
+1. Extract this folder to your preferred location.
+2. Open the extracted ATIP_Final_Autonomous_Build folder in Antigravity.
+3. Open design/ATIP_Six_Screens_Exact_Crops/ATIP_APPROVED_SIX_SCREEN_REFERENCE.png: this is the ACTUAL approved six-screen design image. design/ui-reference.html is only a secondary clickable layout sample.
+4. Open PROMPTS.md, copy the section 'START / RUN AUTONOMOUSLY', and paste it into one Antigravity agent chat.
+5. Let the agent complete SETUP and then implement M0 UI first, verify it and show the running preview; it should then continue M1–M9 automatically. Only intervene when the agent provides a genuine external-setup blocker with exact steps.
+
+Seven canonical Markdown files total. No per-phase prompts necessary. The HTML is a design reference, not the actual app.
+
+FINAL WHITE-BOX REVISION: This pack now includes comprehensive technique-specific white-box analysis, measured MC/DC evidence, mutation/regression and gap-driven reruns. Follow M0–M12 in TASKLIST.md; new supplemental design/whitebox-coverage-reference.png and updated design/ui-reference.html. The original six PNGs remain unchanged. This is a specification/build pack, NOT implemented functionality or trained models.

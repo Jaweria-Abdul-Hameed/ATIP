@@ -1,0 +1,16 @@
+{
+  "name": "atip-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev:web": "pnpm --filter @atip/web dev",
+    "build:web": "pnpm --filter @atip/web build",
+    "lint:web": "pnpm --filter @atip/web lint",
+    "typecheck:web": "pnpm --filter @atip/web typecheck",
+    "test:web": "pnpm --filter @atip/web test"
+  },
+  "devDependencies": {
+    "puppeteer-core": "^25.14.0",
+    "typescript": "^5.8.2"
+  }
+}
