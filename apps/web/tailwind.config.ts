@@ -4,6 +4,8 @@ const config: Config = {
   darkMode: ["class"],
   content: [
     "./src/**/*.{ts,tsx}",
+    "./src/app/**/*.{ts,tsx}",
+    "./src/components/**/*.{ts,tsx}",
   ],
   theme: {
     extend: {
@@ -24,9 +26,9 @@ const config: Config = {
         },
       },
       fontFamily: {
-        sans: ["var(--font-sans)", "Figtree", "system-ui", "-apple-system", "sans-serif"],
-        serif: ["var(--font-serif)", "Source Serif 4", "Georgia", "serif"],
-        mono: ["var(--font-mono)", "ui-monospace", "SFMono-Regular", "Menlo", "Consolas", "monospace"],
+        sans: ["Figtree", "system-ui", "-apple-system", "sans-serif"],
+        serif: ["'Source Serif 4'", "Georgia", "'Times New Roman'", "serif"],
+        mono: ["ui-monospace", "SFMono-Regular", "Menlo", "Consolas", "monospace"],
       },
       borderRadius: {
         DEFAULT: "8px",

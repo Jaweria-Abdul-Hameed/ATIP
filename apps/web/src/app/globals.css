@@ -1,3 +1,19 @@
+@font-face {
+  font-family: 'Source Serif 4';
+  font-style: normal;
+  font-weight: 200 900;
+  font-display: swap;
+  src: url('/fonts/SourceSerif4-Regular.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Figtree';
+  font-style: normal;
+  font-weight: 300 900;
+  font-display: swap;
+  src: url('/fonts/Figtree-Regular.woff2') format('woff2');
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -36,9 +52,17 @@
   body {
     background-color: var(--bg);
     color: var(--text);
-    font-family: var(--font-sans), Figtree, system-ui, -apple-system, sans-serif;
+    font-family: 'Figtree', Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Main headline typography across all screens matching approved mockups */
+  h1,
+  .font-serif,
+  .main-headline {
+    font-family: 'Source Serif 4', Georgia, 'Times New Roman', serif !important;
+    letter-spacing: -0.035em !important;
   }
 }
 

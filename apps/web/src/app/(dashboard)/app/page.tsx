@@ -68,12 +68,12 @@ export default function OverviewPage() {
     <AppShell breadcrumbs={["Overview"]}>
       {/* Editorial Hero Header */}
       <div className="pt-4 pb-8 max-w-3xl">
-        <h1 className="font-serif text-4xl sm:text-5xl font-normal tracking-tight text-text leading-[1.15]">
+        <h1 className="font-serif text-5xl sm:text-6xl lg:text-[62px] font-normal tracking-[-0.035em] text-text leading-[1.08]">
           Better tests.
           <br />
           Safer changes.
         </h1>
-        <p className="mt-4 text-base text-muted leading-relaxed">
+        <p className="mt-4 text-base text-muted max-w-xl leading-relaxed">
           Analyze your repositories, detect risk, generate tests, and ship with
           confidence.
         </p>
