@@ -37,6 +37,8 @@ class RepositoryConnectRequest(BaseModel):
     is_private: bool = Field(default=False)
     clone_url: str = Field(..., example="https://github.com/acme/api-service.git")
     language: str | None = Field(default=None, example="Python")
+    github_installation_id: str | None = Field(default=None, example="ghi_123456")
+
 
 
 class RepositorySyncResponse(BaseModel):

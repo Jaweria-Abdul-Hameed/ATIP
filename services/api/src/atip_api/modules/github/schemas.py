@@ -44,3 +44,38 @@ class WebhookReceiptResponse(BaseModel):
     status: str = Field(default="accepted")
     event: str
     delivery_id: str
+
+
+class GitHubTokenConnectRequest(BaseModel):
+    token: str = Field(..., min_length=4, description="GitHub Personal Access Token (classic or fine-grained)")
+
+
+class GitHubUserProfile(BaseModel):
+    login: str
+    name: str | None = None
+    avatar_url: str | None = None
+    html_url: str | None = None
+    public_repos: int = 0
+    total_private_repos: int = 0
+
+
+class GitHubRepoItem(BaseModel):
+    id: int
+    name: str
+    full_name: str
+    owner_login: str
+    default_branch: str = "main"
+    is_private: bool = False
+    clone_url: str
+    html_url: str
+    language: str | None = None
+    description: str | None = None
+    updated_at: str | None = None
+    is_connected: bool = False
+
+
+class GitHubTokenConnectResponse(BaseModel):
+    user: GitHubUserProfile
+    repositories: list[GitHubRepoItem]
+    installation_id: str
+

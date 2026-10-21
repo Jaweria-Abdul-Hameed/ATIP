@@ -122,8 +122,23 @@ async def connect_repository(
         raise ConflictError(message=f"Repository '{payload.full_name}' is already connected.")
 
     now_iso = datetime.now(UTC).isoformat()
+
+    installation_id = payload.github_installation_id
+    if not installation_id:
+        from atip_api.db.models.repository import GitHubInstallation
+        inst_stmt = (
+            select(GitHubInstallation.id)
+            .where(
+                GitHubInstallation.organization_id == context.organization.id,
+                GitHubInstallation.is_active.is_(True),
+            )
+            .order_by(GitHubInstallation.created_at.desc())
+        )
+        installation_id = (await db.execute(inst_stmt)).scalars().first()
+
     repo = Repository(
         organization_id=context.organization.id,
+        github_installation_id=installation_id,
         github_repo_id=payload.github_repo_id,
         name=payload.name,
         full_name=payload.full_name,

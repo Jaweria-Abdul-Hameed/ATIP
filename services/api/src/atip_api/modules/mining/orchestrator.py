@@ -49,17 +49,24 @@ class AnalysisPipelineOrchestrator:
             job.started_at = datetime.now(UTC).isoformat()
             await session.commit()
 
+            resolved_repo_path = str(
+                await self.snapshot_mgr.resolve_working_repo_path(
+                    repository.organization_id, repository, repo_path
+                )
+            )
+
             snapshot = await self.snapshot_mgr.get_or_create_snapshot(
                 session=session,
                 org_id=repository.organization_id,
                 repository=repository,
                 ref_or_commit=target_commit_or_ref,
-                local_repo_path=repo_path,
+                local_repo_path=resolved_repo_path,
             )
             resolved_sha = snapshot.commit_sha
             analysis_run.commit_sha = resolved_sha
             analysis_run.status = "running"
             await session.commit()
+            repo_path = resolved_repo_path
 
             # 2. History Mining, Diffs, and Hotspots (M3-02)
             job.status = JobStatus.RUNNING

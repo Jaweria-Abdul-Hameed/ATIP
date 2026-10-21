@@ -193,8 +193,21 @@ export const api = {
     is_private: boolean;
     clone_url: string;
     language?: string | null;
+    github_installation_id?: string | null;
   }) => {
     return apiClient.connectRepository(repo);
+  },
+
+  loginWithGitHubToken: async (token: string) => {
+    return apiClient.loginWithGitHubToken(token);
+  },
+
+  getGitHubUserRepos: async (installationId?: string) => {
+    try {
+      return await apiClient.getGitHubUserRepos(installationId);
+    } catch {
+      return [];
+    }
   },
 
   getBranches: async (repoId: string) => {

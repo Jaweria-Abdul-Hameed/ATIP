@@ -147,18 +147,11 @@ async function recordLiveWalkthrough() {
   await sleep(800);
 
   // ==========================================
-  // SCENE 4: Repositories & Connect Modal
+  // SCENE 4: GitHub Auth & Real Repositories Connection
   // ==========================================
-  console.log("Scene 4: Repositories & Modal...");
+  console.log("Scene 4: GitHub Auth & Repository Connection...");
   await page.goto("http://localhost:3000/app/repositories", { waitUntil: "networkidle0" });
   await sleep(600);
-
-  // Filter search
-  const repoSearch = await page.$('input[placeholder*="Search"], input[type="search"], input[type="text"]');
-  if (repoSearch) {
-    await repoSearch.type("dashboard", { delay: 40 });
-    await sleep(500);
-  }
 
   // Open Connect Repository modal
   const connectBtn = await page.evaluateHandle(() => {
@@ -168,17 +161,36 @@ async function recordLiveWalkthrough() {
   if (connectBtn && connectBtn.asElement()) {
     await connectBtn.asElement().click();
     await sleep(800);
-    // Close modal
-    const closeBtn = await page.evaluateHandle(() => {
-      const btns = Array.from(document.querySelectorAll("button"));
-      return btns.find((b) => b.textContent.includes("Close") || b.getAttribute("aria-label") === "Close");
+
+    // Click "Use Reviewer Test Account" to authenticate and fetch repositories
+    const testAccBtn = await page.evaluateHandle(() => {
+      const buttons = Array.from(document.querySelectorAll("button"));
+      return buttons.find((b) => b.textContent.includes("Reviewer Test Account"));
     });
-    if (closeBtn && closeBtn.asElement()) {
-      await closeBtn.asElement().click();
-    } else {
-      await page.keyboard.press("Escape");
+    if (testAccBtn && testAccBtn.asElement()) {
+      await testAccBtn.asElement().click();
+      await sleep(1000);
     }
-    await sleep(500);
+
+    // Toggle Private filter tab
+    const privTab = await page.evaluateHandle(() => {
+      const buttons = Array.from(document.querySelectorAll("button"));
+      return buttons.find((b) => b.textContent.includes("Private"));
+    });
+    if (privTab && privTab.asElement()) {
+      await privTab.asElement().click();
+      await sleep(800);
+    }
+
+    // Click "Connect" on the private repository
+    const connectRepoBtn = await page.evaluateHandle(() => {
+      const buttons = Array.from(document.querySelectorAll("button"));
+      return buttons.find((b) => b.textContent === "Connect");
+    });
+    if (connectRepoBtn && connectRepoBtn.asElement()) {
+      await connectRepoBtn.asElement().click();
+      await sleep(1500);
+    }
   }
 
   // ==========================================

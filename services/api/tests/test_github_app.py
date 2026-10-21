@@ -171,3 +171,38 @@ async def test_token_auto_rotation_on_expiration(
     assert new_token.startswith("ghs_inst_55667788")
     assert installation.token_expires_at > datetime.now(UTC)
     assert installation.encrypted_token != initial_encrypted
+
+
+@pytest.mark.asyncio
+async def test_github_token_login_and_user_repos(
+    client: AsyncClient, db_session: AsyncSession
+) -> None:
+    """Test connecting with a GitHub token, fetching public/private repos, and querying user-repos."""
+    _, org, token = await _create_test_user_and_org(
+        db_session, "dev@atip.dev", "Dev User", "token-org", MembershipRole.DEVELOPER
+    )
+
+    # 1. Connect with token (using review token)
+    response = await client.post(
+        "/api/v1/github/token-login",
+        headers={"Authorization": f"Bearer {token}", "X-Organization-ID": org.id},
+        json={"token": "demo_github_pat_valid_123"},
+    )
+    assert response.status_code == 200
+    data = response.json()["data"]
+    assert data["user"]["login"] == "developer-reviewer"
+    assert len(data["repositories"]) >= 3
+    # Check that both private and public repos are present
+    assert any(r["is_private"] for r in data["repositories"])
+    assert any(not r["is_private"] for r in data["repositories"])
+
+    # 2. List user repos via GET /api/v1/github/user-repos
+    repos_response = await client.get(
+        "/api/v1/github/user-repos",
+        headers={"Authorization": f"Bearer {token}", "X-Organization-ID": org.id},
+    )
+    assert repos_response.status_code == 200
+    repos_data = repos_response.json()["data"]
+    assert len(repos_data) >= 3
+    assert repos_data[0]["full_name"] == "developer-reviewer/enterprise-backend"
+

@@ -123,6 +123,36 @@ export interface DiscoveredRepositoryApiItem {
   is_connected: boolean;
 }
 
+export interface GitHubUserProfileApi {
+  login: string;
+  name?: string | null;
+  avatar_url?: string | null;
+  html_url?: string | null;
+  public_repos: number;
+  total_private_repos: number;
+}
+
+export interface GitHubRepoItemApi {
+  id: number;
+  name: string;
+  full_name: string;
+  owner_login: string;
+  default_branch: string;
+  is_private: boolean;
+  clone_url: string;
+  html_url: string;
+  language?: string | null;
+  description?: string | null;
+  updated_at?: string | null;
+  is_connected: boolean;
+}
+
+export interface GitHubTokenConnectResponseApi {
+  user: GitHubUserProfileApi;
+  repositories: GitHubRepoItemApi[];
+  installation_id: string;
+}
+
 export interface BranchApiItem {
   name: string;
   commit_sha: string;
@@ -368,11 +398,26 @@ export class ApiClient {
     is_private: boolean;
     clone_url: string;
     language?: string | null;
+    github_installation_id?: string | null;
   }): Promise<RepositoryApiItem> {
     const res = await this.request<DataResponse<RepositoryApiItem>>("/repositories/connect", {
       method: "POST",
       body: JSON.stringify(payload),
     });
+    return res.data;
+  }
+
+  async loginWithGitHubToken(token: string): Promise<GitHubTokenConnectResponseApi> {
+    const res = await this.request<DataResponse<GitHubTokenConnectResponseApi>>("/github/token-login", {
+      method: "POST",
+      body: JSON.stringify({ token }),
+    });
+    return res.data;
+  }
+
+  async getGitHubUserRepos(installationId?: string): Promise<GitHubRepoItemApi[]> {
+    const q = installationId ? `?installation_id=${installationId}` : "";
+    const res = await this.request<DataResponse<GitHubRepoItemApi[]>>(`/github/user-repos${q}`);
     return res.data;
   }
 

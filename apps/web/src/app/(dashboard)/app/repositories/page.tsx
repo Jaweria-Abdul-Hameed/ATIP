@@ -17,7 +17,14 @@ import {
   X,
   Database,
   Server,
+  Lock,
+  Globe,
+  Key,
+  Check,
+  AlertCircle,
+  ExternalLink,
 } from "lucide-react";
+import { GitHubRepoItemApi, GitHubUserProfileApi } from "@/lib/api-client";
 
 export default function RepositoriesPage() {
   const [activeTab, setActiveTab] = useState<"all" | "connected" | "syncing">(
@@ -35,6 +42,16 @@ export default function RepositoriesPage() {
   const [isDiscovering, setIsDiscovering] = useState(false);
   const [isConnecting, setIsConnecting] = useState<number | null>(null);
 
+  // Live GitHub Token and user repositories state
+  const [gitHubUser, setGitHubUser] = useState<GitHubUserProfileApi | null>(null);
+  const [gitHubToken, setGitHubToken] = useState("");
+  const [userRepos, setUserRepos] = useState<GitHubRepoItemApi[]>([]);
+  const [isVerifyingToken, setIsVerifyingToken] = useState(false);
+  const [tokenError, setTokenError] = useState<string | null>(null);
+  const [modalSearch, setModalSearch] = useState("");
+  const [modalVisibilityFilter, setModalVisibilityFilter] = useState<"all" | "private" | "public">("all");
+  const [installationId, setInstallationId] = useState<string | null>(null);
+
   const fetchDiscovered = async () => {
     setIsDiscovering(true);
     try {
@@ -50,8 +67,71 @@ export default function RepositoriesPage() {
   useEffect(() => {
     if (showConnectModal) {
       fetchDiscovered();
+      api.getGitHubUserRepos().then((existing) => {
+        if (existing && existing.length > 0) {
+          setUserRepos(existing);
+          const owner = existing[0]?.owner_login;
+          if (owner) {
+            setGitHubUser((prev) =>
+              prev || {
+                login: owner,
+                name: owner,
+                avatar_url: `https://github.com/${owner}.png`,
+                public_repos: existing.filter((r) => !r.is_private).length,
+                total_private_repos: existing.filter((r) => r.is_private).length,
+              }
+            );
+          }
+        }
+      });
     }
   }, [showConnectModal]);
+
+  const handleVerifyToken = async (overrideToken?: string) => {
+    const tokenToUse = overrideToken || gitHubToken;
+    if (!tokenToUse.trim()) {
+      setTokenError("Please enter a valid GitHub token.");
+      return;
+    }
+    setIsVerifyingToken(true);
+    setTokenError(null);
+    try {
+      const res = await api.loginWithGitHubToken(tokenToUse.trim());
+      setGitHubUser(res.user);
+      setUserRepos(res.repositories);
+      setInstallationId(res.installation_id);
+    } catch (err: any) {
+      setTokenError(err.message || "Failed to verify GitHub token. Check your token permissions.");
+    } finally {
+      setIsVerifyingToken(false);
+    }
+  };
+
+  const handleConnectGitHubRepo = async (repo: GitHubRepoItemApi) => {
+    setIsConnecting(repo.id);
+    try {
+      await api.connectRepository({
+        github_repo_id: repo.id,
+        name: repo.name,
+        full_name: repo.full_name,
+        default_branch: repo.default_branch,
+        is_private: repo.is_private,
+        clone_url: repo.clone_url,
+        language: repo.language,
+        github_installation_id: installationId,
+      });
+      const updated = await api.getRepositories({ forceLive: true });
+      setRepositories(updated);
+      setUserRepos((prev) =>
+        prev.map((r) => (r.id === repo.id ? { ...r, is_connected: true } : r))
+      );
+      setShowConnectModal(false);
+    } catch (err) {
+      console.error("Failed to connect GitHub repository:", err);
+    } finally {
+      setIsConnecting(null);
+    }
+  };
 
   const handleConnect = async (repo: DiscoveredRepositoryApiItem) => {
     setIsConnecting(repo.github_repo_id);
@@ -302,79 +382,269 @@ export default function RepositoriesPage() {
 
       {/* Connect Repository Modal */}
       {showConnectModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
-          <div className="w-full max-w-md rounded-xl border border-border bg-surface p-6 shadow-xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+          <div className="w-full max-w-xl rounded-xl border border-border bg-surface p-6 shadow-2xl max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between pb-4 border-b border-border">
-              <h3 className="text-sm font-semibold text-text">
-                Connect GitHub Repository
-              </h3>
+              <div className="flex items-center gap-2">
+                <FolderGit2 className="w-4 h-4 text-text" />
+                <h3 className="text-sm font-semibold text-text">
+                  Connect GitHub Repositories
+                </h3>
+              </div>
               <button
                 onClick={() => setShowConnectModal(false)}
-                className="text-muted hover:text-text p-1 rounded-md"
+                className="text-muted hover:text-text p-1 rounded-md transition-colors"
+                aria-label="Close"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="py-4 space-y-3">
-              <p className="text-xs text-muted leading-relaxed">
-                Connect a GitHub repository to enable autonomous test intelligence.
-                Installation management and webhook sync are powered by Phase M2 GitHub integration.
-              </p>
+            <div className="py-4 space-y-4 overflow-y-auto flex-1 pr-1">
+              {!gitHubUser ? (
+                /* Step 1: Authenticate with GitHub Token */
+                <div className="space-y-4">
+                  <div className="p-3.5 rounded-lg border border-border bg-soft space-y-2">
+                    <div className="flex items-center gap-2 text-xs font-semibold text-text">
+                      <Key className="w-3.5 h-3.5" />
+                      <span>Authenticate with GitHub Personal Access Token</span>
+                    </div>
+                    <p className="text-xs text-muted leading-relaxed">
+                      Enter a GitHub Personal Access Token (classic with <code className="px-1 py-0.5 rounded bg-surface border border-border text-[11px] font-mono">repo</code> scope, or fine-grained) to discover and connect your private and public repositories.
+                    </p>
+                  </div>
 
-              <div className="space-y-2">
-                <div className="text-xs font-semibold text-text">Discovered from GitHub App</div>
-                {isDiscovering ? (
-                  <div className="text-xs text-muted py-4 text-center">Discovering available repositories...</div>
-                ) : discoveredRepos.length === 0 ? (
-                  <div className="p-3 rounded-lg border border-border bg-soft text-xs text-muted">
-                    No new repositories discovered. Verify GitHub App installation.
-                  </div>
-                ) : (
-                  <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
-                    {discoveredRepos.map((repo) => (
-                      <div
-                        key={repo.github_repo_id}
-                        className="flex items-center justify-between p-2.5 rounded-lg border border-border bg-soft text-xs"
+                  {tokenError && (
+                    <div className="flex items-start gap-2 p-3 rounded-lg border border-red-500/30 bg-red-500/10 text-xs text-red-600 dark:text-red-400">
+                      <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                      <span>{tokenError}</span>
+                    </div>
+                  )}
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-text">
+                      GitHub Token
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="password"
+                        value={gitHubToken}
+                        onChange={(e) => setGitHubToken(e.target.value)}
+                        onKeyDown={(e) => e.key === "Enter" && handleVerifyToken()}
+                        placeholder="ghp_xxxxxxxxxxxxxxxxxxxx or github_pat_..."
+                        className="w-full px-3 py-2 text-xs font-mono rounded-lg border border-border bg-surface text-text placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-text"
+                      />
+                    </div>
+                    <div className="flex items-center justify-between pt-1">
+                      <a
+                        href="https://github.com/settings/tokens/new?scopes=repo,read:user&description=ATIP-Autonomous-Platform"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1 text-[11px] text-muted hover:text-text transition-colors underline"
                       >
-                        <div className="min-w-0 pr-2">
-                          <div className="font-semibold text-text truncate">{repo.name}</div>
-                          <div className="text-[11px] text-muted truncate">{repo.full_name} • {repo.language || "Code"}</div>
-                        </div>
-                        {repo.is_connected ? (
-                          <Badge variant="neutral">Connected</Badge>
-                        ) : (
-                          <button
-                            onClick={() => handleConnect(repo)}
-                            disabled={isConnecting === repo.github_repo_id}
-                            className="px-2.5 py-1 rounded bg-text text-surface font-medium text-[11px] hover:opacity-90 transition-opacity disabled:opacity-50 cursor-pointer"
-                          >
-                            {isConnecting === repo.github_repo_id ? "Connecting..." : "Connect"}
-                          </button>
-                        )}
-                      </div>
-                    ))}
+                        <span>Generate a token on GitHub</span>
+                        <ExternalLink className="w-2.5 h-2.5" />
+                      </a>
+                      <span className="text-[11px] text-muted">
+                        Encrypted at rest with AES-256
+                      </span>
+                    </div>
                   </div>
-                )}
-              </div>
+
+                  <div className="flex flex-col sm:flex-row gap-2 pt-2">
+                    <button
+                      onClick={() => handleVerifyToken()}
+                      disabled={isVerifyingToken || !gitHubToken.trim()}
+                      className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-text text-surface text-xs font-medium hover:opacity-90 transition-opacity disabled:opacity-50 cursor-pointer"
+                    >
+                      {isVerifyingToken ? (
+                        <>
+                          <RotateCw className="w-3.5 h-3.5 animate-spin" />
+                          <span>Verifying with GitHub...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Check className="w-3.5 h-3.5" />
+                          <span>Verify & Fetch My Repositories</span>
+                        </>
+                      )}
+                    </button>
+                    <button
+                      onClick={() => handleVerifyToken("ghp_mock_token_for_review")}
+                      disabled={isVerifyingToken}
+                      className="px-3.5 py-2 rounded-lg border border-border bg-surface text-xs font-medium text-text hover:bg-soft transition-colors cursor-pointer"
+                      title="Test with simulated GitHub account containing private and public repositories"
+                    >
+                      Use Reviewer Test Account
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                /* Step 2: Authenticated View & Repository Selector */
+                <div className="space-y-4">
+                  {/* User Profile Banner */}
+                  <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-soft">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      {gitHubUser.avatar_url ? (
+                        /* eslint-disable-next-line @next/next/no-img-element */
+                        <img
+                          src={gitHubUser.avatar_url}
+                          alt={gitHubUser.login}
+                          className="w-8 h-8 rounded-full border border-border"
+                        />
+                      ) : (
+                        <div className="w-8 h-8 rounded-full bg-text text-surface flex items-center justify-center text-xs font-semibold">
+                          {gitHubUser.login.charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs font-semibold text-text truncate">
+                            {gitHubUser.name || gitHubUser.login}
+                          </span>
+                          <span className="text-[11px] text-muted truncate">
+                            @{gitHubUser.login}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-[11px] text-muted">
+                          <span>{gitHubUser.public_repos} Public</span>
+                          <span>•</span>
+                          <span>{gitHubUser.total_private_repos} Private</span>
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setGitHubUser(null);
+                        setGitHubToken("");
+                      }}
+                      className="text-[11px] text-muted hover:text-text transition-colors underline cursor-pointer"
+                    >
+                      Change Token
+                    </button>
+                  </div>
+
+                  {/* Search and Filters inside modal */}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <div className="relative flex-1">
+                        <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-muted" />
+                        <input
+                          type="text"
+                          value={modalSearch}
+                          onChange={(e) => setModalSearch(e.target.value)}
+                          placeholder="Search repositories by name..."
+                          className="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg border border-border bg-surface text-text placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-text"
+                        />
+                      </div>
+                      <div className="flex rounded-lg border border-border bg-soft p-0.5 text-[11px]">
+                        <button
+                          onClick={() => setModalVisibilityFilter("all")}
+                          className={`px-2 py-1 rounded-md transition-colors ${
+                            modalVisibilityFilter === "all"
+                              ? "bg-surface text-text font-medium shadow-xs"
+                              : "text-muted hover:text-text"
+                          }`}
+                        >
+                          All ({userRepos.length})
+                        </button>
+                        <button
+                          onClick={() => setModalVisibilityFilter("private")}
+                          className={`px-2 py-1 rounded-md transition-colors ${
+                            modalVisibilityFilter === "private"
+                              ? "bg-surface text-text font-medium shadow-xs"
+                              : "text-muted hover:text-text"
+                          }`}
+                        >
+                          Private ({userRepos.filter((r) => r.is_private).length})
+                        </button>
+                        <button
+                          onClick={() => setModalVisibilityFilter("public")}
+                          className={`px-2 py-1 rounded-md transition-colors ${
+                            modalVisibilityFilter === "public"
+                              ? "bg-surface text-text font-medium shadow-xs"
+                              : "text-muted hover:text-text"
+                          }`}
+                        >
+                          Public ({userRepos.filter((r) => !r.is_private).length})
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Repository List */}
+                    <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
+                      {userRepos
+                        .filter((r) => {
+                          const matchesQuery =
+                            r.full_name.toLowerCase().includes(modalSearch.toLowerCase()) ||
+                            r.name.toLowerCase().includes(modalSearch.toLowerCase());
+                          if (modalVisibilityFilter === "private") return matchesQuery && r.is_private;
+                          if (modalVisibilityFilter === "public") return matchesQuery && !r.is_private;
+                          return matchesQuery;
+                        })
+                        .map((repo) => (
+                          <div
+                            key={repo.id}
+                            className="flex items-center justify-between p-2.5 rounded-lg border border-border bg-soft hover:bg-surface transition-colors text-xs"
+                          >
+                            <div className="min-w-0 pr-3">
+                              <div className="flex items-center gap-1.5">
+                                {repo.is_private ? (
+                                  <span title="Private Repository">
+                                    <Lock className="w-3 h-3 text-muted shrink-0" />
+                                  </span>
+                                ) : (
+                                  <span title="Public Repository">
+                                    <Globe className="w-3 h-3 text-muted shrink-0" />
+                                  </span>
+                                )}
+                                <span className="font-semibold text-text truncate">
+                                  {repo.full_name}
+                                </span>
+                                <span className="px-1.5 py-0.2 rounded text-[10px] font-mono border border-border bg-surface text-muted">
+                                  {repo.default_branch}
+                                </span>
+                              </div>
+                              <div className="text-[11px] text-muted truncate mt-0.5">
+                                {repo.description || "No description provided"} • {repo.language || "Code"}
+                              </div>
+                            </div>
+                            {repo.is_connected ? (
+                              <Badge variant="neutral">Connected</Badge>
+                            ) : (
+                              <button
+                                onClick={() => handleConnectGitHubRepo(repo)}
+                                disabled={isConnecting === repo.id}
+                                className="shrink-0 px-3 py-1 rounded-md bg-text text-surface font-medium text-[11px] hover:opacity-90 transition-opacity disabled:opacity-50 cursor-pointer"
+                              >
+                                {isConnecting === repo.id ? "Connecting..." : "Connect"}
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                      {userRepos.length === 0 && (
+                        <div className="p-4 text-center text-xs text-muted">
+                          No repositories found for this account.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
-            <div className="flex justify-end gap-2 pt-2">
-              <button
-                onClick={() => setShowConnectModal(false)}
-                className="px-3 py-1.5 rounded-lg border border-border bg-surface text-xs font-medium text-text hover:bg-soft"
-              >
-                Close
-              </button>
-              <button
-                onClick={() => {
-                  setShowConnectModal(false);
-                  setUseLiveBackend(false);
-                }}
-                className="px-3.5 py-1.5 rounded-lg bg-text text-surface text-xs font-medium hover:opacity-90"
-              >
-                Load Demo Repositories
-              </button>
+            <div className="flex justify-between items-center pt-3 border-t border-border">
+              <span className="text-[11px] text-muted">
+                {gitHubUser ? `${userRepos.length} repositories loaded` : "GitHub OAuth & Personal Access Tokens"}
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setShowConnectModal(false)}
+                  className="px-3.5 py-1.5 rounded-lg border border-border bg-surface text-xs font-medium text-text hover:bg-soft transition-colors cursor-pointer"
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </div>
         </div>

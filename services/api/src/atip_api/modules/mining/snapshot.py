@@ -129,6 +129,39 @@ class SnapshotManager:
     def _get_snapshot_extract_path(self, org_id: str, repo_id: str, commit_sha: str) -> Path:
         return self.base_storage_dir / org_id / repo_id / "extracted" / commit_sha
 
+    async def resolve_working_repo_path(
+        self,
+        org_id: str,
+        repository: Repository,
+        local_repo_path: str | Path | None = None,
+    ) -> Path:
+        """Resolve a usable working directory: local path, existing clone, or remote clone."""
+        if local_repo_path and (Path(local_repo_path) / ".git").exists():
+            return Path(local_repo_path).resolve()
+
+        # If repository has a remote clone_url, clone or fetch into dedicated directory
+        if repository.clone_url and (
+            repository.clone_url.startswith("http://")
+            or repository.clone_url.startswith("https://")
+        ):
+            token = None
+            if repository.installation and repository.installation.encrypted_token:
+                try:
+                    from atip_api.core.crypto import decrypt_secret
+
+                    token = decrypt_secret(repository.installation.encrypted_token)
+                except Exception:
+                    token = None
+            clone_dir = self.base_storage_dir / org_id / repository.id / "repo"
+            return await self.git_fetcher.clone_or_fetch_remote(
+                clone_url=repository.clone_url,
+                target_dir=clone_dir,
+                token=token,
+                branch=repository.default_branch,
+            )
+
+        return Path(local_repo_path or ".").resolve()
+
     async def get_or_create_snapshot(
         self,
         session: AsyncSession,
@@ -139,7 +172,8 @@ class SnapshotManager:
     ) -> RepositorySnapshot:
         """Create an immutable commit-specific snapshot or retrieve existing one."""
         # 1. Determine the source repo path (local repo or fixture or cloned directory)
-        repo_path = Path(local_repo_path or ".").resolve()
+        repo_path = await self.resolve_working_repo_path(org_id, repository, local_repo_path)
+
 
         # 2. Resolve to exact 40-character commit SHA
         commit_sha = await self.git_fetcher.resolve_commit_sha(repo_path, ref_or_commit)

@@ -118,6 +118,40 @@ class SafeGitFetcher:
         except FileNotFoundError as err:
             raise GitExecutionError("Git executable not found in PATH") from err
 
+    async def clone_or_fetch_remote(
+        self,
+        clone_url: str,
+        target_dir: str | Path,
+        token: str | None = None,
+        branch: str | None = None,
+    ) -> Path:
+        """Safely clone or fetch a remote repository into target directory with token authentication."""
+        target = Path(target_dir).resolve()
+        auth_url = clone_url
+        if token and "github.com" in clone_url:
+            clean = clone_url.removeprefix("https://").removeprefix("http://")
+            if "@" in clean:
+                clean = clean.split("@", 1)[1]
+            auth_url = f"https://x-access-token:{token}@{clean}"
+
+        if not (target / ".git").exists():
+            target.parent.mkdir(parents=True, exist_ok=True)
+            args = ["clone", "--depth", "50"]
+            if branch:
+                args.extend(["--branch", branch])
+            args.extend([auth_url, str(target)])
+            code, stdout, stderr = await self.run_git(args, timeout=120)
+            if code != 0:
+                raise GitExecutionError(f"Failed to clone repository: {stderr.strip()}")
+        else:
+            code, stdout, stderr = await self.run_git(
+                ["fetch", "--depth", "50", "origin"], cwd=target, timeout=60
+            )
+            if code != 0:
+                logger.warning("Fetch failed on existing clone: %s", stderr)
+        return target
+
+
     async def resolve_commit_sha(self, repo_path: str | Path, ref: str) -> str:
         """Resolve a branch, tag, or ref to an exact 40-character commit SHA."""
         clean_ref = ref.strip()

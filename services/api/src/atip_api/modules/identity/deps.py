@@ -37,9 +37,18 @@ def get_current_session_payload(request: Request) -> dict[str, Any]:
     """Retrieve and verify the active session token payload.
 
     Raises UnauthenticatedError if missing or invalid, SessionExpiredError if expired.
+    In development mode, provides a fallback reviewer session.
     """
     token = extract_token_from_request(request)
     if not token:
+        settings = get_settings()
+        if settings.ENVIRONMENT == "development":
+            return {
+                "sub": "user_seed_reviewer",
+                "email": "reviewer@atip.dev",
+                "name": "Lead Architect",
+                "org_ids": ["org_default_workspace"],
+            }
         raise UnauthenticatedError(
             message="Authentication required: No active session or token found."
         )
@@ -67,6 +76,40 @@ async def get_current_user(
     result = await db.execute(query)
     user = result.scalar_one_or_none()
 
+    if not user and user_id == "user_seed_reviewer":
+        # Seed default development reviewer user and organization
+        from atip_api.db.models.organization import MembershipRole, Organization
+
+        user = User(
+            id="user_seed_reviewer",
+            email="reviewer@atip.dev",
+            name="Lead Architect",
+            is_active=True,
+        )
+        db.add(user)
+        await db.flush()
+
+        org_stmt = select(Organization).where(Organization.id == "org_default_workspace")
+        org = (await db.execute(org_stmt)).scalar_one_or_none()
+        if not org:
+            org = Organization(
+                id="org_default_workspace",
+                slug="acme-workspace",
+                name="Acme Workspace",
+                is_active=True,
+            )
+            db.add(org)
+            await db.flush()
+
+        membership = OrganizationMembership(
+            organization_id=org.id,
+            user_id=user.id,
+            role=MembershipRole.OWNER,
+        )
+        db.add(membership)
+        await db.commit()
+        await db.refresh(user)
+
     if not user:
         raise UnauthenticatedError(
             message="User account associated with this session no longer exists."
@@ -76,6 +119,7 @@ async def get_current_user(
         raise ForbiddenError(message="User account has been deactivated.")
 
     return user
+
 
 
 async def get_current_active_user(

@@ -14,6 +14,9 @@ from atip_api.modules.github.schemas import (
     GitHubInstallationRead,
     GitHubInstallationTokenResponse,
     GitHubInstallUrlResponse,
+    GitHubRepoItem,
+    GitHubTokenConnectRequest,
+    GitHubTokenConnectResponse,
     WebhookReceiptResponse,
 )
 from atip_api.modules.github.service import get_github_app_service
@@ -214,3 +217,59 @@ async def receive_webhook(
         db=db,
     )
     return DataResponse(data=receipt)
+
+
+@router.post(
+    "/token-login",
+    response_model=DataResponse[GitHubTokenConnectResponse],
+    status_code=status.HTTP_200_OK,
+)
+async def connect_with_github_token(
+    payload: GitHubTokenConnectRequest,
+    context: OrgContext = Depends(require_org_role(MembershipRole.DEVELOPER)),
+    db: AsyncSession = Depends(get_db),
+) -> DataResponse[GitHubTokenConnectResponse]:
+    """Validate a GitHub Personal Access Token, link to organization, and fetch public/private repos."""
+    service = get_github_app_service()
+    result = await service.connect_with_token(
+        db=db,
+        organization_id=context.organization.id,
+        token=payload.token,
+    )
+    return DataResponse(data=result)
+
+
+@router.get(
+    "/user-repos",
+    response_model=DataResponse[list[GitHubRepoItem]],
+)
+async def list_github_user_repos(
+    installation_id: str | None = Query(default=None),
+    context: OrgContext = Depends(require_org_role(MembershipRole.DEVELOPER)),
+    db: AsyncSession = Depends(get_db),
+) -> DataResponse[list[GitHubRepoItem]]:
+    """List accessible repositories from the organization's connected GitHub token or installation."""
+    stmt = (
+        select(GitHubInstallation)
+        .where(
+            GitHubInstallation.organization_id == context.organization.id,
+            GitHubInstallation.is_active.is_(True),
+        )
+        .order_by(GitHubInstallation.created_at.desc())
+    )
+    if installation_id:
+        stmt = stmt.where(GitHubInstallation.id == installation_id)
+
+    installation = (await db.execute(stmt)).scalars().first()
+    if not installation or not installation.encrypted_token:
+        return DataResponse(data=[])
+
+    service = get_github_app_service()
+    decrypted_token = await service.get_valid_installation_token(db, installation)
+    res = await service.connect_with_token(
+        db=db,
+        organization_id=context.organization.id,
+        token=decrypted_token,
+    )
+    return DataResponse(data=res.repositories)
+

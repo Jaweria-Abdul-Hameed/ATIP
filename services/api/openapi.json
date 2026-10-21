@@ -50,14 +50,218 @@
         }
       }
     },
+    "/api/v1/auth/login": {
+      "get": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Auth Login",
+        "description": "Generate OIDC authorization URL and state token.",
+        "operationId": "auth_login_api_v1_auth_login_get",
+        "parameters": [
+          {
+            "name": "redirect_uri",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Redirect Uri"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_AuthLoginResponse_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/callback": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Auth Callback Post",
+        "description": "Process OIDC code exchange, upsert user and org, and establish secure session.",
+        "operationId": "auth_callback_post_api_v1_auth_callback_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuthCallbackRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_AuthSessionResponse_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Auth Callback Get",
+        "description": "GET callback handler for standard browser OIDC redirects.",
+        "operationId": "auth_callback_get_api_v1_auth_callback_get",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "title": "Code"
+            }
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "title": "State"
+            }
+          },
+          {
+            "name": "redirect_uri",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Redirect Uri"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_AuthSessionResponse_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/logout": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Auth Logout",
+        "description": "Logout current user: invalidate session token and clear HTTP-only cookie.",
+        "operationId": "auth_logout_api_v1_auth_logout_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_LogoutResponse_"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/session": {
+      "get": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Auth Session",
+        "description": "Inspect active session status.",
+        "operationId": "auth_session_api_v1_auth_session_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_AuthSessionResponse_"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/me": {
       "get": {
         "tags": [
           "Identity"
         ],
-        "summary": "Get Current User",
+        "summary": "Get Current User Profile",
         "description": "Retrieve profile and organizations for the authenticated user.",
-        "operationId": "get_current_user_api_v1_me_get",
+        "operationId": "get_current_user_profile_api_v1_me_get",
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -78,7 +282,7 @@
           "Organizations"
         ],
         "summary": "List Organizations",
-        "description": "List organizations accessible to the current user.",
+        "description": "List organizations accessible to the current user with their active role.",
         "operationId": "list_organizations_api_v1_organizations_get",
         "parameters": [
           {
@@ -137,7 +341,7 @@
           "Organizations"
         ],
         "summary": "Create Organization",
-        "description": "Create a new organization.",
+        "description": "Create a new organization and assign creator as Owner.",
         "operationId": "create_organization_api_v1_organizations_post",
         "requestBody": {
           "required": true,
@@ -179,7 +383,7 @@
           "Organizations"
         ],
         "summary": "Get Organization",
-        "description": "Get organization by ID.",
+        "description": "Get organization by ID or slug.",
         "operationId": "get_organization_api_v1_organizations__id__get",
         "parameters": [
           {
@@ -216,15 +420,360 @@
         }
       }
     },
-    "/api/v1/repositories": {
+    "/api/v1/organizations/{org_id}/members": {
+      "get": {
+        "tags": [
+          "Organizations"
+        ],
+        "summary": "List Organization Members",
+        "description": "List all members and roles in the organization.",
+        "operationId": "list_organization_members_api_v1_organizations__org_id__members_get",
+        "parameters": [
+          {
+            "name": "X-Organization-ID",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Organization-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_list_MembershipRead__"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/organizations/{org_id}/members/{user_id}": {
+      "patch": {
+        "tags": [
+          "Organizations"
+        ],
+        "summary": "Update Member Role",
+        "description": "Update a member's role (requires Admin or Owner).",
+        "operationId": "update_member_role_api_v1_organizations__org_id__members__user_id__patch",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "User Id"
+            }
+          },
+          {
+            "name": "X-Organization-ID",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Organization-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MembershipUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_MembershipRead_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Organizations"
+        ],
+        "summary": "Remove Member",
+        "description": "Remove a member from the organization (or self-leave).",
+        "operationId": "remove_member_api_v1_organizations__org_id__members__user_id__delete",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "User Id"
+            }
+          },
+          {
+            "name": "X-Organization-ID",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Organization-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_dict_str__str__"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/organizations/{org_id}/invitations": {
+      "get": {
+        "tags": [
+          "Organizations"
+        ],
+        "summary": "List Pending Invitations",
+        "description": "List pending invitations for the organization.",
+        "operationId": "list_pending_invitations_api_v1_organizations__org_id__invitations_get",
+        "parameters": [
+          {
+            "name": "X-Organization-ID",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Organization-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_list_InvitationRead__"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Organizations"
+        ],
+        "summary": "Invite Member",
+        "description": "Invite a new member to the organization by email.",
+        "operationId": "invite_member_api_v1_organizations__org_id__invitations_post",
+        "parameters": [
+          {
+            "name": "X-Organization-ID",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Organization-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InvitationCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_InvitationRead_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/invitations/{token}/accept": {
+      "post": {
+        "tags": [
+          "Organizations"
+        ],
+        "summary": "Accept Invitation",
+        "description": "Accept an organization invitation and join as member.",
+        "operationId": "accept_invitation_api_v1_invitations__token__accept_post",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_InvitationAcceptResponse_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/repositories/discover": {
       "get": {
         "tags": [
           "Repositories"
         ],
-        "summary": "List Repositories",
-        "description": "List repositories connected to the active organization.",
-        "operationId": "list_repositories_api_v1_repositories_get",
+        "summary": "Discover Repositories",
+        "description": "Discover repositories from connected GitHub App installations available to the organization.",
+        "operationId": "discover_repositories_api_v1_repositories_discover_get",
         "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Search filter for repository name",
+              "title": "Query"
+            },
+            "description": "Search filter for repository name"
+          },
           {
             "name": "page",
             "in": "query",
@@ -251,6 +800,195 @@
               "title": "Page Size"
             },
             "description": "Items per page (max 100)"
+          },
+          {
+            "name": "X-Organization-ID",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Organization-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_RepositoryDiscoverItem_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/repositories/connect": {
+      "post": {
+        "tags": [
+          "Repositories"
+        ],
+        "summary": "Connect Repository",
+        "description": "Connect a discovered GitHub repository to the organization and trigger initial sync.",
+        "operationId": "connect_repository_api_v1_repositories_connect_post",
+        "parameters": [
+          {
+            "name": "X-Organization-ID",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Organization-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RepositoryConnectRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_RepositoryRead_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/repositories": {
+      "get": {
+        "tags": [
+          "Repositories"
+        ],
+        "summary": "List Repositories",
+        "description": "List repositories connected to the active organization with search, filtering, and pagination.",
+        "operationId": "list_repositories_api_v1_repositories_get",
+        "parameters": [
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Search term for repository name",
+              "title": "Search"
+            },
+            "description": "Search term for repository name"
+          },
+          {
+            "name": "language",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Language filter",
+              "title": "Language"
+            },
+            "description": "Language filter"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Page number starting from 1",
+              "default": 1,
+              "title": "Page"
+            },
+            "description": "Page number starting from 1"
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "description": "Items per page (max 100)",
+              "default": 20,
+              "title": "Page Size"
+            },
+            "description": "Items per page (max 100)"
+          },
+          {
+            "name": "X-Organization-ID",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Organization-Id"
+            }
           }
         ],
         "responses": {
@@ -283,7 +1021,7 @@
           "Repositories"
         ],
         "summary": "Get Repository",
-        "description": "Get single repository by ID.",
+        "description": "Get single repository by ID, scoped to active organization.",
         "operationId": "get_repository_api_v1_repositories__id__get",
         "parameters": [
           {
@@ -293,6 +1031,22 @@
             "schema": {
               "type": "string",
               "title": "Id"
+            }
+          },
+          {
+            "name": "X-Organization-ID",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Organization-Id"
             }
           }
         ],
@@ -337,6 +1091,22 @@
               "type": "string",
               "title": "Id"
             }
+          },
+          {
+            "name": "X-Organization-ID",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Organization-Id"
+            }
           }
         ],
         "responses": {
@@ -369,7 +1139,7 @@
           "Repositories"
         ],
         "summary": "List Branches",
-        "description": "List available branches for repository.",
+        "description": "List available branches for repository selector.",
         "operationId": "list_branches_api_v1_repositories__id__branches_get",
         "parameters": [
           {
@@ -379,6 +1149,22 @@
             "schema": {
               "type": "string",
               "title": "Id"
+            }
+          },
+          {
+            "name": "X-Organization-ID",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Organization-Id"
             }
           }
         ],
@@ -406,7 +1192,243 @@
         }
       }
     },
+    "/api/v1/repositories/{id}/pull-requests": {
+      "get": {
+        "tags": [
+          "Repositories"
+        ],
+        "summary": "List Pull Requests",
+        "description": "List pull requests for repository selector.",
+        "operationId": "list_pull_requests_api_v1_repositories__id__pull_requests_get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          },
+          {
+            "name": "X-Organization-ID",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Organization-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_list_PullRequestSummary__"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/github/install-url": {
+      "get": {
+        "tags": [
+          "GitHub"
+        ],
+        "summary": "Get Install Url",
+        "description": "Generate GitHub App installation redirect URL for current organization.",
+        "operationId": "get_install_url_api_v1_github_install_url_get",
+        "parameters": [
+          {
+            "name": "X-Organization-ID",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Organization-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_GitHubInstallUrlResponse_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/github/callback": {
+      "get": {
+        "tags": [
+          "GitHub"
+        ],
+        "summary": "Github App Callback",
+        "description": "Callback route invoked by GitHub after App installation.",
+        "operationId": "github_app_callback_api_v1_github_callback_get",
+        "parameters": [
+          {
+            "name": "installation_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Installation Id"
+            }
+          },
+          {
+            "name": "setup_action",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "install",
+              "title": "Setup Action"
+            }
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "State"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_GitHubInstallationRead_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/github/installations": {
+      "post": {
+        "tags": [
+          "GitHub"
+        ],
+        "summary": "Create Installation",
+        "description": "Register or link a GitHub App installation to the organization.",
+        "operationId": "create_installation_api_v1_github_installations_post",
+        "parameters": [
+          {
+            "name": "X-Organization-ID",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Organization-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GitHubInstallationCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_GitHubInstallationRead_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
       "get": {
         "tags": [
           "GitHub"
@@ -414,13 +1436,100 @@
         "summary": "List Installations",
         "description": "List active GitHub App installations for organization.",
         "operationId": "list_installations_api_v1_github_installations_get",
+        "parameters": [
+          {
+            "name": "X-Organization-ID",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Organization-Id"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/DataResponse_list_GitHubInstallationSummary__"
+                  "$ref": "#/components/schemas/DataResponse_list_GitHubInstallationRead__"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/github/installations/{installation_id}/token": {
+      "get": {
+        "tags": [
+          "GitHub"
+        ],
+        "summary": "Get Installation Token",
+        "description": "Retrieve an active installation token for authorized repository operations.",
+        "operationId": "get_installation_token_api_v1_github_installations__installation_id__token_get",
+        "parameters": [
+          {
+            "name": "installation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Installation Id"
+            }
+          },
+          {
+            "name": "X-Organization-ID",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Organization-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_GitHubInstallationTokenResponse_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -434,7 +1543,7 @@
           "GitHub"
         ],
         "summary": "Receive Webhook",
-        "description": "Ingest GitHub signed webhooks with raw body verification and deduplication.",
+        "description": "Ingest GitHub signed webhooks with raw body verification, deduplication, and transactional outbox persistence.",
         "operationId": "receive_webhook_api_v1_github_webhooks_post",
         "parameters": [
           {
@@ -490,13 +1599,1071 @@
         }
       }
     },
+    "/api/v1/github/token-login": {
+      "post": {
+        "tags": [
+          "GitHub"
+        ],
+        "summary": "Connect With Github Token",
+        "description": "Validate a GitHub Personal Access Token, link to organization, and fetch public/private repos.",
+        "operationId": "connect_with_github_token_api_v1_github_token_login_post",
+        "parameters": [
+          {
+            "name": "X-Organization-ID",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Organization-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GitHubTokenConnectRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_GitHubTokenConnectResponse_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/github/user-repos": {
+      "get": {
+        "tags": [
+          "GitHub"
+        ],
+        "summary": "List Github User Repos",
+        "description": "List accessible repositories from the organization's connected GitHub token or installation.",
+        "operationId": "list_github_user_repos_api_v1_github_user_repos_get",
+        "parameters": [
+          {
+            "name": "installation_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Installation Id"
+            }
+          },
+          {
+            "name": "X-Organization-ID",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Organization-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_list_GitHubRepoItem__"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/repositories/{id}/snapshots": {
+      "post": {
+        "tags": [
+          "Mining & Analysis"
+        ],
+        "summary": "Create Snapshot",
+        "description": "Create or retrieve an immutable commit-specific repository snapshot.",
+        "operationId": "create_snapshot_api_v1_repositories__id__snapshots_post",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SnapshotCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_SnapshotRead_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Mining & Analysis"
+        ],
+        "summary": "List Snapshots",
+        "description": "List immutable repository snapshots.",
+        "operationId": "list_snapshots_api_v1_repositories__id__snapshots_get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Page Size"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_SnapshotRead_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/repositories/{id}/snapshots/{commit_sha}": {
+      "get": {
+        "tags": [
+          "Mining & Analysis"
+        ],
+        "summary": "Get Snapshot",
+        "description": "Get single immutable snapshot by commit SHA or snapshot ID.",
+        "operationId": "get_snapshot_api_v1_repositories__id__snapshots__commit_sha__get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          },
+          {
+            "name": "commit_sha",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Commit Sha"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_SnapshotRead_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/repositories/{id}/snapshots/{commit_sha}/tree": {
+      "get": {
+        "tags": [
+          "Mining & Analysis"
+        ],
+        "summary": "Get Snapshot Tree",
+        "description": "List all files in repository tree at snapshot commit without checkout.",
+        "operationId": "get_snapshot_tree_api_v1_repositories__id__snapshots__commit_sha__tree_get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          },
+          {
+            "name": "commit_sha",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Commit Sha"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_list_SnapshotTreeItem__"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/repositories/{id}/snapshots/{commit_sha}/files/{path}": {
+      "get": {
+        "tags": [
+          "Mining & Analysis"
+        ],
+        "summary": "Get Snapshot File",
+        "description": "Read a specific file from the repository at commit_sha safely without checkout.",
+        "operationId": "get_snapshot_file_api_v1_repositories__id__snapshots__commit_sha__files__path__get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          },
+          {
+            "name": "commit_sha",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Commit Sha"
+            }
+          },
+          {
+            "name": "path",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Path"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_SnapshotFileContent_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/repositories/{id}/mine-history": {
+      "post": {
+        "tags": [
+          "Mining & Analysis"
+        ],
+        "summary": "Mine Repository History",
+        "description": "Mine commit history, file diffs, and change statistics without checkout.",
+        "operationId": "mine_repository_history_api_v1_repositories__id__mine_history_post",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MineHistoryRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_list_CommitRead__"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/repositories/{id}/commits": {
+      "get": {
+        "tags": [
+          "Mining & Analysis"
+        ],
+        "summary": "List Commits",
+        "description": "List mined repository commits with pagination.",
+        "operationId": "list_commits_api_v1_repositories__id__commits_get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Page Size"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_CommitRead_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/repositories/{id}/commits/{commit_sha}": {
+      "get": {
+        "tags": [
+          "Mining & Analysis"
+        ],
+        "summary": "Get Commit Detail",
+        "description": "Get commit details including file changes and modifications.",
+        "operationId": "get_commit_detail_api_v1_repositories__id__commits__commit_sha__get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          },
+          {
+            "name": "commit_sha",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Commit Sha"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_CommitDetailRead_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/repositories/{id}/hotspots": {
+      "get": {
+        "tags": [
+          "Mining & Analysis"
+        ],
+        "summary": "Get Repository Hotspots",
+        "description": "Get file churn, ownership, and risk hotspot ranking.",
+        "operationId": "get_repository_hotspots_api_v1_repositories__id__hotspots_get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          },
+          {
+            "name": "min_changes",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "title": "Min Changes"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_list_HotspotRead__"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/repositories/{id}/dependencies": {
+      "get": {
+        "tags": [
+          "Mining & Analysis"
+        ],
+        "summary": "Get Repository Dependencies",
+        "description": "Get import and dependency graph with nodes, edges, and cycles.",
+        "operationId": "get_repository_dependencies_api_v1_repositories__id__dependencies_get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          },
+          {
+            "name": "commit_sha",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "HEAD",
+              "title": "Commit Sha"
+            }
+          },
+          {
+            "name": "repo_path",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Repo Path"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_DependencyGraphRead_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/repositories/{id}/dependencies/file": {
+      "get": {
+        "tags": [
+          "Mining & Analysis"
+        ],
+        "summary": "Get File Dependencies",
+        "description": "Get direct dependencies and reverse dependents (blast radius) for a specific file.",
+        "operationId": "get_file_dependencies_api_v1_repositories__id__dependencies_file_get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          },
+          {
+            "name": "path",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "File path relative to repository root",
+              "title": "Path"
+            },
+            "description": "File path relative to repository root"
+          },
+          {
+            "name": "commit_sha",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "HEAD",
+              "title": "Commit Sha"
+            }
+          },
+          {
+            "name": "repo_path",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Repo Path"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_FileDependencyDetailRead_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/repositories/{id}/complexity": {
+      "get": {
+        "tags": [
+          "Mining & Analysis"
+        ],
+        "summary": "Get Repository Complexity",
+        "description": "Compute LOC, Cyclomatic Complexity, function inventory, and maintainability index.",
+        "operationId": "get_repository_complexity_api_v1_repositories__id__complexity_get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          },
+          {
+            "name": "commit_sha",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "HEAD",
+              "title": "Commit Sha"
+            }
+          },
+          {
+            "name": "file_path",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "File Path"
+            }
+          },
+          {
+            "name": "repo_path",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Repo Path"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_list_FileComplexityRead__"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/repositories/{id}/tests": {
+      "get": {
+        "tags": [
+          "Mining & Analysis"
+        ],
+        "summary": "Get Repository Tests",
+        "description": "Discover existing test suites, test cases, and framework types across repository.",
+        "operationId": "get_repository_tests_api_v1_repositories__id__tests_get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          },
+          {
+            "name": "commit_sha",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "HEAD",
+              "title": "Commit Sha"
+            }
+          },
+          {
+            "name": "repo_path",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Repo Path"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_list_DiscoveredTestRead__"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/repositories/{id}/coverage/ingest": {
+      "post": {
+        "tags": [
+          "Mining & Analysis"
+        ],
+        "summary": "Ingest Repository Coverage",
+        "description": "Ingest real coverage report (Coverage.py JSON, LCOV info, or Cobertura XML).",
+        "operationId": "ingest_repository_coverage_api_v1_repositories__id__coverage_ingest_post",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          },
+          {
+            "name": "commit_sha",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "HEAD",
+              "title": "Commit Sha"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CoverageIngestRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_CoverageSummaryRead_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/repositories/{id}/coverage": {
+      "get": {
+        "tags": [
+          "Mining & Analysis"
+        ],
+        "summary": "Get Repository Coverage",
+        "description": "Retrieve ingested coverage summary. If not ingested, returns None (honest empty state).",
+        "operationId": "get_repository_coverage_api_v1_repositories__id__coverage_get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          },
+          {
+            "name": "commit_sha",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Commit Sha"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_Union_CoverageSummaryRead__NoneType__"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/repositories/{id}/analyses": {
       "post": {
         "tags": [
           "Mining & Analysis"
         ],
         "summary": "Trigger Analysis",
-        "description": "Trigger repository mining and static analysis job.",
+        "description": "Trigger repository mining and static analysis job with idempotency and progress tracking.",
         "operationId": "trigger_analysis_api_v1_repositories__id__analyses_post",
         "parameters": [
           {
@@ -507,6 +2674,18 @@
               "type": "string",
               "title": "Id"
             }
+          },
+          {
+            "name": "sync",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Run synchronously for tests",
+              "default": false,
+              "title": "Sync"
+            },
+            "description": "Run synchronously for tests"
           }
         ],
         "requestBody": {
@@ -541,6 +2720,70 @@
             }
           }
         }
+      },
+      "get": {
+        "tags": [
+          "Mining & Analysis"
+        ],
+        "summary": "List Repository Analyses",
+        "description": "List historical analysis runs for repository.",
+        "operationId": "list_repository_analyses_api_v1_repositories__id__analyses_get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Page Size"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_AnalysisRunDetailRead_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/analyses/{id}": {
@@ -549,7 +2792,7 @@
           "Mining & Analysis"
         ],
         "summary": "Get Analysis",
-        "description": "Get analysis job status and progress.",
+        "description": "Get analysis job status, current step, and progress percentage.",
         "operationId": "get_analysis_api_v1_analyses__id__get",
         "parameters": [
           {
@@ -1335,6 +3578,68 @@
           }
         }
       }
+    },
+    "/api/v1/webhooks/github": {
+      "post": {
+        "tags": [
+          "GitHub"
+        ],
+        "summary": "Receive Webhook",
+        "description": "Ingest GitHub signed webhooks with raw body verification, deduplication, and transactional outbox persistence.",
+        "operationId": "receive_webhook_api_v1_webhooks_github_post",
+        "parameters": [
+          {
+            "name": "X-GitHub-Event",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "X-Github-Event"
+            }
+          },
+          {
+            "name": "X-GitHub-Delivery",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "X-Github-Delivery"
+            }
+          },
+          {
+            "name": "X-Hub-Signature-256",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Hub-Signature-256"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_WebhookReceiptResponse_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1352,7 +3657,7 @@
           "status": {
             "type": "string",
             "title": "Status",
-            "default": "running"
+            "default": "queued"
           },
           "progress_pct": {
             "type": "integer",
@@ -1362,12 +3667,45 @@
           "current_step": {
             "type": "string",
             "title": "Current Step",
-            "default": "Initializing repository checkout"
+            "default": "Queued for analysis"
           },
           "commit_sha": {
             "type": "string",
             "title": "Commit Sha",
             "default": "HEAD"
+          },
+          "error_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Message"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
           }
         },
         "type": "object",
@@ -1376,6 +3714,132 @@
           "repository_id"
         ],
         "title": "AnalysisJobRead"
+      },
+      "AnalysisRunDetailRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "repository_id": {
+            "type": "string",
+            "title": "Repository Id"
+          },
+          "commit_sha": {
+            "type": "string",
+            "title": "Commit Sha"
+          },
+          "branch": {
+            "type": "string",
+            "title": "Branch"
+          },
+          "job_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Job Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "total_files": {
+            "type": "integer",
+            "title": "Total Files"
+          },
+          "total_lines": {
+            "type": "integer",
+            "title": "Total Lines"
+          },
+          "languages_json": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Languages Json"
+          },
+          "complexity_summary": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Complexity Summary"
+          },
+          "test_inventory": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Test Inventory"
+          },
+          "coverage_summary": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Coverage Summary"
+          },
+          "dependency_count": {
+            "type": "integer",
+            "title": "Dependency Count"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "repository_id",
+          "commit_sha",
+          "branch",
+          "status",
+          "total_files",
+          "total_lines",
+          "dependency_count",
+          "created_at"
+        ],
+        "title": "AnalysisRunDetailRead"
       },
       "AnalysisTriggerRequest": {
         "properties": {
@@ -1403,6 +3867,24 @@
             "title": "Branch",
             "default": "main",
             "example": "main"
+          },
+          "repo_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Repo Path",
+            "description": "Local repo path for tests or fixtures"
+          },
+          "force_rerun": {
+            "type": "boolean",
+            "title": "Force Rerun",
+            "description": "Force rerun even if analysis already completed",
+            "default": false
           }
         },
         "type": "object",
@@ -1496,6 +3978,103 @@
         ],
         "title": "AuditEventRead"
       },
+      "AuthCallbackRequest": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Code",
+            "description": "OIDC authorization code"
+          },
+          "state": {
+            "type": "string",
+            "minLength": 1,
+            "title": "State",
+            "description": "State nonce for CSRF validation"
+          },
+          "redirect_uri": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Redirect Uri",
+            "description": "Client redirect URI"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "state"
+        ],
+        "title": "AuthCallbackRequest"
+      },
+      "AuthLoginResponse": {
+        "properties": {
+          "authorization_url": {
+            "type": "string",
+            "title": "Authorization Url"
+          },
+          "state": {
+            "type": "string",
+            "title": "State"
+          }
+        },
+        "type": "object",
+        "required": [
+          "authorization_url",
+          "state"
+        ],
+        "title": "AuthLoginResponse"
+      },
+      "AuthSessionResponse": {
+        "properties": {
+          "authenticated": {
+            "type": "boolean",
+            "title": "Authenticated"
+          },
+          "user": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UserProfile"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Token"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "authenticated"
+        ],
+        "title": "AuthSessionResponse"
+      },
       "BranchSummary": {
         "properties": {
           "name": {
@@ -1549,6 +4128,287 @@
         ],
         "title": "Citation"
       },
+      "CommitDetailRead": {
+        "properties": {
+          "commit": {
+            "$ref": "#/components/schemas/CommitRead"
+          },
+          "file_changes": {
+            "items": {
+              "$ref": "#/components/schemas/FileChangeRead"
+            },
+            "type": "array",
+            "title": "File Changes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "commit",
+          "file_changes"
+        ],
+        "title": "CommitDetailRead"
+      },
+      "CommitRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "repository_id": {
+            "type": "string",
+            "title": "Repository Id"
+          },
+          "organization_id": {
+            "type": "string",
+            "title": "Organization Id"
+          },
+          "commit_sha": {
+            "type": "string",
+            "title": "Commit Sha"
+          },
+          "tree_sha": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tree Sha"
+          },
+          "parent_shas": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Shas"
+          },
+          "author_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Author Name"
+          },
+          "author_email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Author Email"
+          },
+          "committer_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Committer Name"
+          },
+          "committer_email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Committer Email"
+          },
+          "committed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Committed At"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "default": ""
+          },
+          "insertions": {
+            "type": "integer",
+            "title": "Insertions",
+            "default": 0
+          },
+          "deletions": {
+            "type": "integer",
+            "title": "Deletions",
+            "default": 0
+          },
+          "files_changed_count": {
+            "type": "integer",
+            "title": "Files Changed Count",
+            "default": 0
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "repository_id",
+          "organization_id",
+          "commit_sha",
+          "created_at"
+        ],
+        "title": "CommitRead"
+      },
+      "CoverageFileDetailRead": {
+        "properties": {
+          "file_path": {
+            "type": "string",
+            "title": "File Path"
+          },
+          "statements_total": {
+            "type": "integer",
+            "title": "Statements Total"
+          },
+          "statements_covered": {
+            "type": "integer",
+            "title": "Statements Covered"
+          },
+          "coverage_pct": {
+            "type": "number",
+            "title": "Coverage Pct"
+          },
+          "covered_lines": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Covered Lines"
+          },
+          "uncovered_lines": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Uncovered Lines"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file_path",
+          "statements_total",
+          "statements_covered",
+          "coverage_pct"
+        ],
+        "title": "CoverageFileDetailRead"
+      },
+      "CoverageIngestRequest": {
+        "properties": {
+          "format_type": {
+            "type": "string",
+            "title": "Format Type",
+            "description": "coverage.json | lcov | cobertura_xml",
+            "default": "coverage.json"
+          },
+          "content": {
+            "type": "string",
+            "title": "Content",
+            "description": "Raw coverage file contents (JSON string, LCOV info text, or Cobertura XML)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "content"
+        ],
+        "title": "CoverageIngestRequest"
+      },
+      "CoverageSummaryRead": {
+        "properties": {
+          "format_type": {
+            "type": "string",
+            "title": "Format Type"
+          },
+          "statements_total": {
+            "type": "integer",
+            "title": "Statements Total"
+          },
+          "statements_covered": {
+            "type": "integer",
+            "title": "Statements Covered"
+          },
+          "statement_coverage_pct": {
+            "type": "number",
+            "title": "Statement Coverage Pct"
+          },
+          "branches_total": {
+            "type": "integer",
+            "title": "Branches Total"
+          },
+          "branches_covered": {
+            "type": "integer",
+            "title": "Branches Covered"
+          },
+          "branch_coverage_pct": {
+            "type": "number",
+            "title": "Branch Coverage Pct"
+          },
+          "files_count": {
+            "type": "integer",
+            "title": "Files Count"
+          },
+          "files": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/CoverageFileDetailRead"
+            },
+            "type": "object",
+            "title": "Files"
+          }
+        },
+        "type": "object",
+        "required": [
+          "format_type",
+          "statements_total",
+          "statements_covered",
+          "statement_coverage_pct",
+          "branches_total",
+          "branches_covered",
+          "branch_coverage_pct",
+          "files_count"
+        ],
+        "title": "CoverageSummaryRead"
+      },
       "DataResponse_AnalysisJobRead_": {
         "properties": {
           "data": {
@@ -1579,6 +4439,156 @@
         ],
         "title": "DataResponse[ApprovalResponse]"
       },
+      "DataResponse_AuthLoginResponse_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/AuthLoginResponse"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "DataResponse[AuthLoginResponse]"
+      },
+      "DataResponse_AuthSessionResponse_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/AuthSessionResponse"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "DataResponse[AuthSessionResponse]"
+      },
+      "DataResponse_CommitDetailRead_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/CommitDetailRead"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "DataResponse[CommitDetailRead]"
+      },
+      "DataResponse_CoverageSummaryRead_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/CoverageSummaryRead"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "DataResponse[CoverageSummaryRead]"
+      },
+      "DataResponse_DependencyGraphRead_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/DependencyGraphRead"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "DataResponse[DependencyGraphRead]"
+      },
+      "DataResponse_FileDependencyDetailRead_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/FileDependencyDetailRead"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "DataResponse[FileDependencyDetailRead]"
+      },
+      "DataResponse_GitHubInstallUrlResponse_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/GitHubInstallUrlResponse"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "DataResponse[GitHubInstallUrlResponse]"
+      },
+      "DataResponse_GitHubInstallationRead_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/GitHubInstallationRead"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "DataResponse[GitHubInstallationRead]"
+      },
+      "DataResponse_GitHubInstallationTokenResponse_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/GitHubInstallationTokenResponse"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "DataResponse[GitHubInstallationTokenResponse]"
+      },
+      "DataResponse_GitHubTokenConnectResponse_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/GitHubTokenConnectResponse"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "DataResponse[GitHubTokenConnectResponse]"
+      },
       "DataResponse_HealthStatus_": {
         "properties": {
           "data": {
@@ -1594,6 +4604,36 @@
         ],
         "title": "DataResponse[HealthStatus]"
       },
+      "DataResponse_InvitationAcceptResponse_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/InvitationAcceptResponse"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "DataResponse[InvitationAcceptResponse]"
+      },
+      "DataResponse_InvitationRead_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/InvitationRead"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "DataResponse[InvitationRead]"
+      },
       "DataResponse_JobCancelResponse_": {
         "properties": {
           "data": {
@@ -1608,6 +4648,36 @@
           "data"
         ],
         "title": "DataResponse[JobCancelResponse]"
+      },
+      "DataResponse_LogoutResponse_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/LogoutResponse"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "DataResponse[LogoutResponse]"
+      },
+      "DataResponse_MembershipRead_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/MembershipRead"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "DataResponse[MembershipRead]"
       },
       "DataResponse_OrganizationRead_": {
         "properties": {
@@ -1699,6 +4769,36 @@
         ],
         "title": "DataResponse[RepositorySyncResponse]"
       },
+      "DataResponse_SnapshotFileContent_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/SnapshotFileContent"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "DataResponse[SnapshotFileContent]"
+      },
+      "DataResponse_SnapshotRead_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/SnapshotRead"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "DataResponse[SnapshotRead]"
+      },
       "DataResponse_TestPlanRead_": {
         "properties": {
           "data": {
@@ -1743,6 +4843,28 @@
           "data"
         ],
         "title": "DataResponse[TriageResponse]"
+      },
+      "DataResponse_Union_CoverageSummaryRead__NoneType__": {
+        "properties": {
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CoverageSummaryRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "DataResponse[Union[CoverageSummaryRead, NoneType]]"
       },
       "DataResponse_UserProfile_": {
         "properties": {
@@ -1806,6 +4928,25 @@
         ],
         "title": "DataResponse[dict[str, Any]]"
       },
+      "DataResponse_dict_str__str__": {
+        "properties": {
+          "data": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Data"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "DataResponse[dict[str, str]]"
+      },
       "DataResponse_list_BranchSummary__": {
         "properties": {
           "data": {
@@ -1825,11 +4966,11 @@
         ],
         "title": "DataResponse[list[BranchSummary]]"
       },
-      "DataResponse_list_GitHubInstallationSummary__": {
+      "DataResponse_list_CommitRead__": {
         "properties": {
           "data": {
             "items": {
-              "$ref": "#/components/schemas/GitHubInstallationSummary"
+              "$ref": "#/components/schemas/CommitRead"
             },
             "type": "array",
             "title": "Data"
@@ -1842,13 +4983,652 @@
         "required": [
           "data"
         ],
-        "title": "DataResponse[list[GitHubInstallationSummary]]"
+        "title": "DataResponse[list[CommitRead]]"
       },
-      "GitHubInstallationSummary": {
+      "DataResponse_list_DiscoveredTestRead__": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/DiscoveredTestRead"
+            },
+            "type": "array",
+            "title": "Data"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "DataResponse[list[DiscoveredTestRead]]"
+      },
+      "DataResponse_list_FileComplexityRead__": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/FileComplexityRead"
+            },
+            "type": "array",
+            "title": "Data"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "DataResponse[list[FileComplexityRead]]"
+      },
+      "DataResponse_list_GitHubInstallationRead__": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/GitHubInstallationRead"
+            },
+            "type": "array",
+            "title": "Data"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "DataResponse[list[GitHubInstallationRead]]"
+      },
+      "DataResponse_list_GitHubRepoItem__": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/GitHubRepoItem"
+            },
+            "type": "array",
+            "title": "Data"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "DataResponse[list[GitHubRepoItem]]"
+      },
+      "DataResponse_list_HotspotRead__": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/HotspotRead"
+            },
+            "type": "array",
+            "title": "Data"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "DataResponse[list[HotspotRead]]"
+      },
+      "DataResponse_list_InvitationRead__": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/InvitationRead"
+            },
+            "type": "array",
+            "title": "Data"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "DataResponse[list[InvitationRead]]"
+      },
+      "DataResponse_list_MembershipRead__": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/MembershipRead"
+            },
+            "type": "array",
+            "title": "Data"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "DataResponse[list[MembershipRead]]"
+      },
+      "DataResponse_list_PullRequestSummary__": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/PullRequestSummary"
+            },
+            "type": "array",
+            "title": "Data"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "DataResponse[list[PullRequestSummary]]"
+      },
+      "DataResponse_list_SnapshotTreeItem__": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/SnapshotTreeItem"
+            },
+            "type": "array",
+            "title": "Data"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "DataResponse[list[SnapshotTreeItem]]"
+      },
+      "DependencyEdgeRead": {
+        "properties": {
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "target": {
+            "type": "string",
+            "title": "Target"
+          },
+          "target_module": {
+            "type": "string",
+            "title": "Target Module"
+          },
+          "target_file": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target File"
+          },
+          "is_external": {
+            "type": "boolean",
+            "title": "Is External",
+            "default": false
+          },
+          "import_type": {
+            "type": "string",
+            "title": "Import Type"
+          },
+          "line": {
+            "type": "integer",
+            "title": "Line",
+            "default": 1
+          }
+        },
+        "type": "object",
+        "required": [
+          "source",
+          "target",
+          "target_module",
+          "import_type"
+        ],
+        "title": "DependencyEdgeRead"
+      },
+      "DependencyGraphRead": {
+        "properties": {
+          "commit_sha": {
+            "type": "string",
+            "title": "Commit Sha"
+          },
+          "total_nodes": {
+            "type": "integer",
+            "title": "Total Nodes"
+          },
+          "total_edges": {
+            "type": "integer",
+            "title": "Total Edges"
+          },
+          "internal_edges_count": {
+            "type": "integer",
+            "title": "Internal Edges Count"
+          },
+          "external_edges_count": {
+            "type": "integer",
+            "title": "External Edges Count"
+          },
+          "circular_cycles": {
+            "items": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Circular Cycles"
+          },
+          "nodes": {
+            "items": {
+              "$ref": "#/components/schemas/DependencyNodeRead"
+            },
+            "type": "array",
+            "title": "Nodes"
+          },
+          "edges": {
+            "items": {
+              "$ref": "#/components/schemas/DependencyEdgeRead"
+            },
+            "type": "array",
+            "title": "Edges"
+          }
+        },
+        "type": "object",
+        "required": [
+          "commit_sha",
+          "total_nodes",
+          "total_edges",
+          "internal_edges_count",
+          "external_edges_count",
+          "nodes",
+          "edges"
+        ],
+        "title": "DependencyGraphRead"
+      },
+      "DependencyNodeRead": {
         "properties": {
           "id": {
             "type": "string",
             "title": "Id"
+          },
+          "file_path": {
+            "type": "string",
+            "title": "File Path"
+          },
+          "fan_in": {
+            "type": "integer",
+            "title": "Fan In",
+            "default": 0
+          },
+          "fan_out": {
+            "type": "integer",
+            "title": "Fan Out",
+            "default": 0
+          },
+          "dependencies": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Dependencies"
+          },
+          "dependents": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Dependents"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "file_path"
+        ],
+        "title": "DependencyNodeRead"
+      },
+      "DiscoveredTestRead": {
+        "properties": {
+          "file_path": {
+            "type": "string",
+            "title": "File Path"
+          },
+          "suite_name": {
+            "type": "string",
+            "title": "Suite Name"
+          },
+          "test_name": {
+            "type": "string",
+            "title": "Test Name"
+          },
+          "line_number": {
+            "type": "integer",
+            "title": "Line Number"
+          },
+          "framework": {
+            "type": "string",
+            "title": "Framework"
+          },
+          "language": {
+            "type": "string",
+            "title": "Language"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file_path",
+          "suite_name",
+          "test_name",
+          "line_number",
+          "framework",
+          "language"
+        ],
+        "title": "DiscoveredTestRead"
+      },
+      "FileChangeRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "commit_sha": {
+            "type": "string",
+            "title": "Commit Sha"
+          },
+          "file_path": {
+            "type": "string",
+            "title": "File Path"
+          },
+          "previous_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous Path"
+          },
+          "change_type": {
+            "type": "string",
+            "title": "Change Type"
+          },
+          "insertions": {
+            "type": "integer",
+            "title": "Insertions",
+            "default": 0
+          },
+          "deletions": {
+            "type": "integer",
+            "title": "Deletions",
+            "default": 0
+          },
+          "is_test": {
+            "type": "boolean",
+            "title": "Is Test",
+            "default": false
+          },
+          "language": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Language"
+          },
+          "patch": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Patch"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "commit_sha",
+          "file_path",
+          "change_type"
+        ],
+        "title": "FileChangeRead"
+      },
+      "FileComplexityRead": {
+        "properties": {
+          "file_path": {
+            "type": "string",
+            "title": "File Path"
+          },
+          "language": {
+            "type": "string",
+            "title": "Language"
+          },
+          "lines_total": {
+            "type": "integer",
+            "title": "Lines Total"
+          },
+          "lines_code": {
+            "type": "integer",
+            "title": "Lines Code"
+          },
+          "lines_comments": {
+            "type": "integer",
+            "title": "Lines Comments"
+          },
+          "lines_blank": {
+            "type": "integer",
+            "title": "Lines Blank"
+          },
+          "cyclomatic_complexity": {
+            "type": "integer",
+            "title": "Cyclomatic Complexity"
+          },
+          "average_function_complexity": {
+            "type": "number",
+            "title": "Average Function Complexity"
+          },
+          "max_function_complexity": {
+            "type": "integer",
+            "title": "Max Function Complexity"
+          },
+          "maintainability_index": {
+            "type": "number",
+            "title": "Maintainability Index"
+          },
+          "functions": {
+            "items": {
+              "$ref": "#/components/schemas/FunctionComplexityRead"
+            },
+            "type": "array",
+            "title": "Functions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file_path",
+          "language",
+          "lines_total",
+          "lines_code",
+          "lines_comments",
+          "lines_blank",
+          "cyclomatic_complexity",
+          "average_function_complexity",
+          "max_function_complexity",
+          "maintainability_index"
+        ],
+        "title": "FileComplexityRead"
+      },
+      "FileDependencyDetailRead": {
+        "properties": {
+          "file_path": {
+            "type": "string",
+            "title": "File Path"
+          },
+          "direct_dependencies": {
+            "items": {
+              "$ref": "#/components/schemas/DependencyEdgeRead"
+            },
+            "type": "array",
+            "title": "Direct Dependencies"
+          },
+          "reverse_dependents": {
+            "items": {
+              "$ref": "#/components/schemas/DependencyEdgeRead"
+            },
+            "type": "array",
+            "title": "Reverse Dependents"
+          },
+          "blast_radius_count": {
+            "type": "integer",
+            "title": "Blast Radius Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file_path",
+          "direct_dependencies",
+          "reverse_dependents",
+          "blast_radius_count"
+        ],
+        "title": "FileDependencyDetailRead"
+      },
+      "FunctionComplexityRead": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "line_start": {
+            "type": "integer",
+            "title": "Line Start"
+          },
+          "line_end": {
+            "type": "integer",
+            "title": "Line End"
+          },
+          "complexity": {
+            "type": "integer",
+            "title": "Complexity"
+          },
+          "arg_count": {
+            "type": "integer",
+            "title": "Arg Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "line_start",
+          "line_end",
+          "complexity",
+          "arg_count"
+        ],
+        "title": "FunctionComplexityRead"
+      },
+      "GitHubInstallUrlResponse": {
+        "properties": {
+          "install_url": {
+            "type": "string",
+            "title": "Install Url"
+          },
+          "organization_id": {
+            "type": "string",
+            "title": "Organization Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "install_url",
+          "organization_id"
+        ],
+        "title": "GitHubInstallUrlResponse"
+      },
+      "GitHubInstallationCreate": {
+        "properties": {
+          "installation_id": {
+            "type": "integer",
+            "title": "Installation Id",
+            "example": 12345678
+          },
+          "account_login": {
+            "type": "string",
+            "title": "Account Login",
+            "example": "octocat-org"
+          },
+          "account_id": {
+            "type": "integer",
+            "title": "Account Id",
+            "example": 583231
+          },
+          "target_type": {
+            "type": "string",
+            "title": "Target Type",
+            "default": "Organization",
+            "example": "Organization"
+          },
+          "repository_selection": {
+            "type": "string",
+            "title": "Repository Selection",
+            "default": "selected",
+            "example": "selected"
+          },
+          "permissions": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Permissions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "installation_id",
+          "account_login",
+          "account_id"
+        ],
+        "title": "GitHubInstallationCreate"
+      },
+      "GitHubInstallationRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "organization_id": {
+            "type": "string",
+            "title": "Organization Id"
           },
           "installation_id": {
             "type": "integer",
@@ -1858,6 +5638,10 @@
             "type": "string",
             "title": "Account Login"
           },
+          "account_id": {
+            "type": "integer",
+            "title": "Account Id"
+          },
           "target_type": {
             "type": "string",
             "title": "Target Type"
@@ -1865,17 +5649,254 @@
           "repository_selection": {
             "type": "string",
             "title": "Repository Selection"
+          },
+          "permissions": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Permissions"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
           }
         },
         "type": "object",
         "required": [
           "id",
+          "organization_id",
           "installation_id",
           "account_login",
+          "account_id",
           "target_type",
-          "repository_selection"
+          "repository_selection",
+          "is_active",
+          "created_at",
+          "updated_at"
         ],
-        "title": "GitHubInstallationSummary"
+        "title": "GitHubInstallationRead"
+      },
+      "GitHubInstallationTokenResponse": {
+        "properties": {
+          "token": {
+            "type": "string",
+            "title": "Token",
+            "description": "Masked or scoped installation token"
+          },
+          "token_type": {
+            "type": "string",
+            "title": "Token Type",
+            "default": "Bearer"
+          },
+          "expires_at": {
+            "type": "string",
+            "title": "Expires At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "token",
+          "expires_at"
+        ],
+        "title": "GitHubInstallationTokenResponse"
+      },
+      "GitHubRepoItem": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "full_name": {
+            "type": "string",
+            "title": "Full Name"
+          },
+          "owner_login": {
+            "type": "string",
+            "title": "Owner Login"
+          },
+          "default_branch": {
+            "type": "string",
+            "title": "Default Branch",
+            "default": "main"
+          },
+          "is_private": {
+            "type": "boolean",
+            "title": "Is Private",
+            "default": false
+          },
+          "clone_url": {
+            "type": "string",
+            "title": "Clone Url"
+          },
+          "html_url": {
+            "type": "string",
+            "title": "Html Url"
+          },
+          "language": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Language"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          },
+          "is_connected": {
+            "type": "boolean",
+            "title": "Is Connected",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "full_name",
+          "owner_login",
+          "clone_url",
+          "html_url"
+        ],
+        "title": "GitHubRepoItem"
+      },
+      "GitHubTokenConnectRequest": {
+        "properties": {
+          "token": {
+            "type": "string",
+            "minLength": 4,
+            "title": "Token",
+            "description": "GitHub Personal Access Token (classic or fine-grained)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "token"
+        ],
+        "title": "GitHubTokenConnectRequest"
+      },
+      "GitHubTokenConnectResponse": {
+        "properties": {
+          "user": {
+            "$ref": "#/components/schemas/GitHubUserProfile"
+          },
+          "repositories": {
+            "items": {
+              "$ref": "#/components/schemas/GitHubRepoItem"
+            },
+            "type": "array",
+            "title": "Repositories"
+          },
+          "installation_id": {
+            "type": "string",
+            "title": "Installation Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "user",
+          "repositories",
+          "installation_id"
+        ],
+        "title": "GitHubTokenConnectResponse"
+      },
+      "GitHubUserProfile": {
+        "properties": {
+          "login": {
+            "type": "string",
+            "title": "Login"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "avatar_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatar Url"
+          },
+          "html_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Html Url"
+          },
+          "public_repos": {
+            "type": "integer",
+            "title": "Public Repos",
+            "default": 0
+          },
+          "total_private_repos": {
+            "type": "integer",
+            "title": "Total Private Repos",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "login"
+        ],
+        "title": "GitHubUserProfile"
       },
       "HTTPValidationError": {
         "properties": {
@@ -1914,6 +5935,203 @@
         "type": "object",
         "title": "HealthStatus"
       },
+      "HotspotRead": {
+        "properties": {
+          "file_path": {
+            "type": "string",
+            "title": "File Path"
+          },
+          "change_count": {
+            "type": "integer",
+            "title": "Change Count"
+          },
+          "total_insertions": {
+            "type": "integer",
+            "title": "Total Insertions"
+          },
+          "total_deletions": {
+            "type": "integer",
+            "title": "Total Deletions"
+          },
+          "total_churn": {
+            "type": "integer",
+            "title": "Total Churn"
+          },
+          "distinct_authors_count": {
+            "type": "integer",
+            "title": "Distinct Authors Count"
+          },
+          "primary_owner": {
+            "type": "string",
+            "title": "Primary Owner"
+          },
+          "ownership_pct": {
+            "type": "number",
+            "title": "Ownership Pct"
+          },
+          "authors": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Authors"
+          },
+          "is_test": {
+            "type": "boolean",
+            "title": "Is Test"
+          },
+          "language": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Language"
+          },
+          "hotspot_score": {
+            "type": "number",
+            "title": "Hotspot Score"
+          },
+          "last_modified": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Modified"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file_path",
+          "change_count",
+          "total_insertions",
+          "total_deletions",
+          "total_churn",
+          "distinct_authors_count",
+          "primary_owner",
+          "ownership_pct",
+          "authors",
+          "is_test",
+          "hotspot_score"
+        ],
+        "title": "HotspotRead"
+      },
+      "InvitationAcceptResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success",
+            "default": true
+          },
+          "organization_id": {
+            "type": "string",
+            "title": "Organization Id"
+          },
+          "organization_name": {
+            "type": "string",
+            "title": "Organization Name"
+          },
+          "role": {
+            "type": "string",
+            "title": "Role"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "default": "Invitation accepted successfully."
+          }
+        },
+        "type": "object",
+        "required": [
+          "organization_id",
+          "organization_name",
+          "role"
+        ],
+        "title": "InvitationAcceptResponse"
+      },
+      "InvitationCreate": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email",
+            "example": "newengineer@atip.dev"
+          },
+          "role": {
+            "$ref": "#/components/schemas/MembershipRole",
+            "default": "developer",
+            "example": "developer"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email"
+        ],
+        "title": "InvitationCreate"
+      },
+      "InvitationRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "example": "inv_1234567890"
+          },
+          "organization_id": {
+            "type": "string",
+            "title": "Organization Id",
+            "example": "org_1234567890"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email",
+            "example": "newengineer@atip.dev"
+          },
+          "role": {
+            "type": "string",
+            "title": "Role",
+            "example": "developer"
+          },
+          "invited_by_user_id": {
+            "type": "string",
+            "title": "Invited By User Id",
+            "example": "usr_1234567890"
+          },
+          "token": {
+            "type": "string",
+            "title": "Token",
+            "example": "inv_tok_abcdef123456"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expires At"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "organization_id",
+          "email",
+          "role",
+          "invited_by_user_id",
+          "token",
+          "expires_at",
+          "created_at"
+        ],
+        "title": "InvitationRead"
+      },
       "JobCancelResponse": {
         "properties": {
           "job_id": {
@@ -1936,6 +6154,121 @@
           "job_id"
         ],
         "title": "JobCancelResponse"
+      },
+      "LogoutResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success",
+            "default": true
+          },
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "default": "Successfully logged out and session cleared."
+          }
+        },
+        "type": "object",
+        "title": "LogoutResponse"
+      },
+      "MembershipRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "example": "mem_1234567890"
+          },
+          "user_id": {
+            "type": "string",
+            "title": "User Id",
+            "example": "usr_1234567890"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email",
+            "example": "alice@example.com"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "example": "Alice Smith"
+          },
+          "avatar_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatar Url"
+          },
+          "role": {
+            "type": "string",
+            "title": "Role",
+            "example": "admin"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "user_id",
+          "email",
+          "name",
+          "role",
+          "created_at"
+        ],
+        "title": "MembershipRead"
+      },
+      "MembershipRole": {
+        "type": "string",
+        "enum": [
+          "owner",
+          "admin",
+          "maintainer",
+          "developer",
+          "viewer"
+        ],
+        "title": "MembershipRole"
+      },
+      "MembershipUpdate": {
+        "properties": {
+          "role": {
+            "$ref": "#/components/schemas/MembershipRole",
+            "example": "admin"
+          }
+        },
+        "type": "object",
+        "required": [
+          "role"
+        ],
+        "title": "MembershipUpdate"
+      },
+      "MineHistoryRequest": {
+        "properties": {
+          "branch": {
+            "type": "string",
+            "title": "Branch",
+            "description": "Branch name or ref to mine",
+            "default": "HEAD"
+          },
+          "max_commits": {
+            "type": "integer",
+            "maximum": 500.0,
+            "minimum": 1.0,
+            "title": "Max Commits",
+            "description": "Max commits to extract",
+            "default": 50
+          }
+        },
+        "type": "object",
+        "title": "MineHistoryRequest"
       },
       "ObjectiveKindSummary": {
         "properties": {
@@ -2001,6 +6334,12 @@
             "minLength": 2,
             "title": "Slug",
             "example": "acme-engineering"
+          },
+          "billing_tier": {
+            "type": "string",
+            "title": "Billing Tier",
+            "default": "team",
+            "example": "team"
           }
         },
         "type": "object",
@@ -2032,6 +6371,18 @@
             "title": "Billing Tier",
             "default": "team",
             "example": "team"
+          },
+          "role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role",
+            "example": "owner"
           },
           "created_at": {
             "type": "string",
@@ -2086,6 +6437,29 @@
         ],
         "title": "OrganizationSummary"
       },
+      "PaginatedResponse_AnalysisRunDetailRead_": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/AnalysisRunDetailRead"
+            },
+            "type": "array",
+            "title": "Data"
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/PaginationMetadata"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data",
+          "pagination"
+        ],
+        "title": "PaginatedResponse[AnalysisRunDetailRead]"
+      },
       "PaginatedResponse_AuditEventRead_": {
         "properties": {
           "data": {
@@ -2108,6 +6482,29 @@
           "pagination"
         ],
         "title": "PaginatedResponse[AuditEventRead]"
+      },
+      "PaginatedResponse_CommitRead_": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/CommitRead"
+            },
+            "type": "array",
+            "title": "Data"
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/PaginationMetadata"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data",
+          "pagination"
+        ],
+        "title": "PaginatedResponse[CommitRead]"
       },
       "PaginatedResponse_OrganizationRead_": {
         "properties": {
@@ -2132,6 +6529,29 @@
         ],
         "title": "PaginatedResponse[OrganizationRead]"
       },
+      "PaginatedResponse_RepositoryDiscoverItem_": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/RepositoryDiscoverItem"
+            },
+            "type": "array",
+            "title": "Data"
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/PaginationMetadata"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data",
+          "pagination"
+        ],
+        "title": "PaginatedResponse[RepositoryDiscoverItem]"
+      },
       "PaginatedResponse_RepositoryRead_": {
         "properties": {
           "data": {
@@ -2154,6 +6574,29 @@
           "pagination"
         ],
         "title": "PaginatedResponse[RepositoryRead]"
+      },
+      "PaginatedResponse_SnapshotRead_": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/SnapshotRead"
+            },
+            "type": "array",
+            "title": "Data"
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/PaginationMetadata"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data",
+          "pagination"
+        ],
+        "title": "PaginatedResponse[SnapshotRead]"
       },
       "PaginatedResponse_TestPlanRead_": {
         "properties": {
@@ -2262,6 +6705,68 @@
         ],
         "title": "PaginationMetadata"
       },
+      "PullRequestSummary": {
+        "properties": {
+          "number": {
+            "type": "integer",
+            "title": "Number",
+            "example": 42
+          },
+          "title": {
+            "type": "string",
+            "title": "Title",
+            "example": "feat: add white-box test plan generation"
+          },
+          "state": {
+            "type": "string",
+            "title": "State",
+            "default": "open",
+            "example": "open"
+          },
+          "head_branch": {
+            "type": "string",
+            "title": "Head Branch",
+            "example": "feat/white-box"
+          },
+          "head_sha": {
+            "type": "string",
+            "title": "Head Sha",
+            "example": "7960a5e8"
+          },
+          "base_branch": {
+            "type": "string",
+            "title": "Base Branch",
+            "default": "main",
+            "example": "main"
+          },
+          "author": {
+            "type": "string",
+            "title": "Author",
+            "example": "octocat"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At",
+            "example": "2026-10-21T08:00:00Z"
+          },
+          "updated_at": {
+            "type": "string",
+            "title": "Updated At",
+            "example": "2026-10-21T09:00:00Z"
+          }
+        },
+        "type": "object",
+        "required": [
+          "number",
+          "title",
+          "head_branch",
+          "head_sha",
+          "author",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "PullRequestSummary"
+      },
       "QualityMetricPoint": {
         "properties": {
           "timestamp": {
@@ -2355,12 +6860,154 @@
         "type": "object",
         "title": "ReadinessStatus"
       },
+      "RepositoryConnectRequest": {
+        "properties": {
+          "github_repo_id": {
+            "type": "integer",
+            "title": "Github Repo Id",
+            "example": 123456
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Name",
+            "example": "api-service"
+          },
+          "full_name": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Full Name",
+            "example": "acme/api-service"
+          },
+          "default_branch": {
+            "type": "string",
+            "title": "Default Branch",
+            "default": "main",
+            "example": "main"
+          },
+          "is_private": {
+            "type": "boolean",
+            "title": "Is Private",
+            "default": false
+          },
+          "clone_url": {
+            "type": "string",
+            "title": "Clone Url",
+            "example": "https://github.com/acme/api-service.git"
+          },
+          "language": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Language",
+            "example": "Python"
+          },
+          "github_installation_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Github Installation Id",
+            "example": "ghi_123456"
+          }
+        },
+        "type": "object",
+        "required": [
+          "github_repo_id",
+          "name",
+          "full_name",
+          "clone_url"
+        ],
+        "title": "RepositoryConnectRequest"
+      },
+      "RepositoryDiscoverItem": {
+        "properties": {
+          "github_repo_id": {
+            "type": "integer",
+            "title": "Github Repo Id",
+            "example": 123456
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "example": "api-service"
+          },
+          "full_name": {
+            "type": "string",
+            "title": "Full Name",
+            "example": "acme/api-service"
+          },
+          "default_branch": {
+            "type": "string",
+            "title": "Default Branch",
+            "default": "main",
+            "example": "main"
+          },
+          "is_private": {
+            "type": "boolean",
+            "title": "Is Private",
+            "default": false
+          },
+          "clone_url": {
+            "type": "string",
+            "title": "Clone Url",
+            "example": "https://github.com/acme/api-service.git"
+          },
+          "language": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Language",
+            "default": "Python",
+            "example": "Python"
+          },
+          "is_connected": {
+            "type": "boolean",
+            "title": "Is Connected",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "github_repo_id",
+          "name",
+          "full_name",
+          "clone_url"
+        ],
+        "title": "RepositoryDiscoverItem"
+      },
       "RepositoryRead": {
         "properties": {
           "id": {
             "type": "string",
             "title": "Id",
             "example": "repo_nextjs_dashboard"
+          },
+          "organization_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Organization Id",
+            "example": "org_default"
           },
           "name": {
             "type": "string",
@@ -2589,6 +7236,215 @@
         ],
         "title": "RiskyFileAssessment"
       },
+      "SnapshotCreateRequest": {
+        "properties": {
+          "ref": {
+            "type": "string",
+            "title": "Ref",
+            "description": "Branch name, tag, or commit reference",
+            "default": "HEAD"
+          },
+          "commit_sha": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Commit Sha",
+            "description": "Explicit 40-char commit SHA if known"
+          }
+        },
+        "type": "object",
+        "title": "SnapshotCreateRequest"
+      },
+      "SnapshotFileContent": {
+        "properties": {
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "commit_sha": {
+            "type": "string",
+            "title": "Commit Sha"
+          },
+          "size_bytes": {
+            "type": "integer",
+            "title": "Size Bytes"
+          },
+          "content": {
+            "type": "string",
+            "title": "Content"
+          },
+          "is_binary": {
+            "type": "boolean",
+            "title": "Is Binary",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "path",
+          "commit_sha",
+          "size_bytes",
+          "content"
+        ],
+        "title": "SnapshotFileContent"
+      },
+      "SnapshotRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "repository_id": {
+            "type": "string",
+            "title": "Repository Id"
+          },
+          "organization_id": {
+            "type": "string",
+            "title": "Organization Id"
+          },
+          "commit_sha": {
+            "type": "string",
+            "title": "Commit Sha"
+          },
+          "tree_sha": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tree Sha"
+          },
+          "parent_shas": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Shas"
+          },
+          "branch_name": {
+            "type": "string",
+            "title": "Branch Name"
+          },
+          "ref": {
+            "type": "string",
+            "title": "Ref"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
+          },
+          "author_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Author Name"
+          },
+          "author_email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Author Email"
+          },
+          "committed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Committed At"
+          },
+          "stats_json": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stats Json"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "repository_id",
+          "organization_id",
+          "commit_sha",
+          "branch_name",
+          "ref",
+          "created_at"
+        ],
+        "title": "SnapshotRead"
+      },
+      "SnapshotTreeItem": {
+        "properties": {
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type",
+            "default": "blob"
+          },
+          "size_bytes": {
+            "type": "integer",
+            "title": "Size Bytes",
+            "default": 0
+          },
+          "sha": {
+            "type": "string",
+            "title": "Sha",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "path"
+        ],
+        "title": "SnapshotTreeItem"
+      },
       "TestPlanRead": {
         "properties": {
           "id": {
@@ -2810,7 +7666,7 @@
             "type": "string",
             "format": "email",
             "title": "Email",
-            "example": "developer@atip.local"
+            "example": "developer@atip.dev"
           },
           "name": {
             "type": "string",
@@ -2895,7 +7751,7 @@
           "status": {
             "type": "string",
             "title": "Status",
-            "default": "received"
+            "default": "accepted"
           },
           "event": {
             "type": "string",
