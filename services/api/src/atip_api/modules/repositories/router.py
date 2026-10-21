@@ -175,12 +175,18 @@ async def list_repositories(
 ) -> PaginatedResponse[RepositoryRead]:
     """List repositories connected to the active organization with search, filtering, and pagination."""
     stmt = select(Repository).where(Repository.organization_id == context.organization.id)
-    count_stmt = select(func.count(Repository.id)).where(Repository.organization_id == context.organization.id)
+    count_stmt = select(func.count(Repository.id)).where(
+        Repository.organization_id == context.organization.id
+    )
 
     if search:
         search_filter = f"%{search}%"
-        stmt = stmt.where(Repository.name.ilike(search_filter) | Repository.full_name.ilike(search_filter))
-        count_stmt = count_stmt.where(Repository.name.ilike(search_filter) | Repository.full_name.ilike(search_filter))
+        stmt = stmt.where(
+            Repository.name.ilike(search_filter) | Repository.full_name.ilike(search_filter)
+        )
+        count_stmt = count_stmt.where(
+            Repository.name.ilike(search_filter) | Repository.full_name.ilike(search_filter)
+        )
 
     if language:
         stmt = stmt.where(Repository.language == language)

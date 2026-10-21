@@ -40,9 +40,7 @@ class GitHubAppService:
         else:
             return jwt.encode(payload, self.settings.SECRET_KEY, algorithm="HS256")
 
-    async def get_installation_access_token(
-        self, installation_id: int
-    ) -> tuple[str, datetime]:
+    async def get_installation_access_token(self, installation_id: int) -> tuple[str, datetime]:
         """Mint or exchange an installation-scoped access token.
 
         In production, calls POST https://api.github.com/app/installations/{installation_id}/access_tokens.
@@ -82,7 +80,8 @@ class GitHubAppService:
                 account_id=account_id,
                 target_type=target_type,
                 repository_selection=repository_selection,
-                permissions=permissions or {"contents": "read", "checks": "write", "pull_requests": "write"},
+                permissions=permissions
+                or {"contents": "read", "checks": "write", "pull_requests": "write"},
                 encrypted_token=encrypted_token,
                 token_expires_at=expires_at,
                 is_active=True,

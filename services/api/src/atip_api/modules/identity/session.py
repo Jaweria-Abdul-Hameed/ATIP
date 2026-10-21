@@ -66,9 +66,7 @@ def verify_session_token(token: str) -> dict[str, Any]:
         )
         return payload
     except jwt.ExpiredSignatureError as e:
-        raise SessionExpiredError(
-            message="Session token has expired. Please sign in again."
-        ) from e
+        raise SessionExpiredError(message="Session token has expired. Please sign in again.") from e
     except jwt.PyJWTError as e:
         raise UnauthenticatedError(message=f"Invalid session token: {e}") from e
 

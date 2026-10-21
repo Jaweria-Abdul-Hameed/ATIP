@@ -86,7 +86,12 @@ async def list_organizations(
         ]
     else:
         # Fallback for unauthenticated dev queries
-        stmt = select(Organization).where(Organization.is_active.is_(True)).offset(pagination.offset).limit(pagination.limit)
+        stmt = (
+            select(Organization)
+            .where(Organization.is_active.is_(True))
+            .offset(pagination.offset)
+            .limit(pagination.limit)
+        )
         result = await db.execute(stmt)
         orgs = result.scalars().all()
         count_stmt = select(func.count(Organization.id)).where(Organization.is_active.is_(True))
@@ -207,6 +212,7 @@ async def get_organization(
 # ---------------------------------------------------------------------------
 # Membership Management & RBAC: /organizations/{org_id}/members
 # ---------------------------------------------------------------------------
+
 
 @router.get(
     "/organizations/{org_id}/members",
@@ -343,13 +349,16 @@ async def remove_member(
     await db.commit()
 
     return DataResponse(
-        data={"message": f"Member '{user_id}' removed from organization '{context.organization.slug}'."}
+        data={
+            "message": f"Member '{user_id}' removed from organization '{context.organization.slug}'."
+        }
     )
 
 
 # ---------------------------------------------------------------------------
 # Organization Invitations: /organizations/{org_id}/invitations
 # ---------------------------------------------------------------------------
+
 
 def _ensure_utc(dt: datetime) -> datetime:
     if dt.tzinfo is None:
@@ -436,7 +445,9 @@ async def invite_member(
             id=invitation.id,
             organization_id=invitation.organization_id,
             email=invitation.email,
-            role=invitation.role.value if hasattr(invitation.role, "value") else str(invitation.role),
+            role=invitation.role.value
+            if hasattr(invitation.role, "value")
+            else str(invitation.role),
             invited_by_user_id=invitation.invited_by_user_id,
             token=invitation.token,
             expires_at=invitation.expires_at,
@@ -496,7 +507,9 @@ async def accept_invitation(
             success=True,
             organization_id=invitation.organization.id,
             organization_name=invitation.organization.name,
-            role=invitation.role.value if hasattr(invitation.role, "value") else str(invitation.role),
+            role=invitation.role.value
+            if hasattr(invitation.role, "value")
+            else str(invitation.role),
             message=f"Successfully joined organization '{invitation.organization.name}'.",
         )
     )

@@ -118,9 +118,7 @@ async def test_rbac_full_hierarchy_enforcement(
 
 
 @pytest.mark.asyncio
-async def test_cross_tenant_strict_boundary(
-    client: AsyncClient, db_session: AsyncSession
-) -> None:
+async def test_cross_tenant_strict_boundary(client: AsyncClient, db_session: AsyncSession) -> None:
     """Verify tenant isolation: Tenant A user cannot access or modify Tenant B data."""
     # Tenant Alpha
     _, org_alpha, token_alpha = await _create_tenant_with_user(
@@ -164,7 +162,10 @@ async def test_webhook_security_tamper_detection(client: AsyncClient) -> None:
     """Verify that even a 1-byte alteration in payload invalidates webhook HMAC."""
     settings = get_settings()
     legit_body = json.dumps({"action": "synchronize", "repo": "atip"}).encode("utf-8")
-    sig = "sha256=" + hmac.new(settings.GITHUB_WEBHOOK_SECRET.encode(), legit_body, hashlib.sha256).hexdigest()
+    sig = (
+        "sha256="
+        + hmac.new(settings.GITHUB_WEBHOOK_SECRET.encode(), legit_body, hashlib.sha256).hexdigest()
+    )
 
     # Tampered body with original signature
     tampered_body = json.dumps({"action": "synchronize", "repo": "atip-hacked"}).encode("utf-8")

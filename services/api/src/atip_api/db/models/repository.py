@@ -31,7 +31,9 @@ class GitHubInstallation(Base, TimestampMixin, OrgScopedMixin):
     )
     permissions: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
     encrypted_token: Mapped[str | None] = mapped_column(String(1024), nullable=True)
-    token_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    token_expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
     # Relationships
@@ -106,6 +108,11 @@ class RepositorySnapshot(Base, TimestampMixin, OrgScopedMixin):
     summary: Mapped[str | None] = mapped_column(String(512), nullable=True)
     author_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     author_email: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    tree_sha: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    parent_shas: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
+    committed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    storage_path: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    stats_json: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
 
     # Relationships
     repository: Mapped["Repository"] = relationship("Repository", back_populates="snapshots")

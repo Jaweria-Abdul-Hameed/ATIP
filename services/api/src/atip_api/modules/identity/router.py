@@ -1,6 +1,5 @@
 """Identity and Authentication router implementing OIDC, sessions, and user profile."""
 
-
 from fastapi import APIRouter, Depends, Query, Request, Response
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -65,6 +64,7 @@ def _build_user_profile(user: User) -> UserProfile:
 # ---------------------------------------------------------------------------
 # Authentication endpoints: /api/v1/auth/*
 # ---------------------------------------------------------------------------
+
 
 @router.get("/auth/login", response_model=DataResponse[AuthLoginResponse], tags=["Authentication"])
 async def auth_login(
@@ -131,9 +131,7 @@ async def _handle_auth_callback(
     db: AsyncSession,
 ) -> DataResponse[AuthSessionResponse]:
     oidc = get_oidc_client()
-    oidc_user = await oidc.exchange_code_for_user(
-        code=code, state=state, redirect_uri=redirect_uri
-    )
+    oidc_user = await oidc.exchange_code_for_user(code=code, state=state, redirect_uri=redirect_uri)
 
     # Find or create user
     stmt = (
@@ -256,6 +254,7 @@ async def auth_session(
 # ---------------------------------------------------------------------------
 # Identity endpoint: /api/v1/me (Protected route)
 # ---------------------------------------------------------------------------
+
 
 @router.get(
     "/me",

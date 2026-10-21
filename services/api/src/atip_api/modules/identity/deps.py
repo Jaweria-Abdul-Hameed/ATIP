@@ -40,7 +40,9 @@ def get_current_session_payload(request: Request) -> dict[str, Any]:
     """
     token = extract_token_from_request(request)
     if not token:
-        raise UnauthenticatedError(message="Authentication required: No active session or token found.")
+        raise UnauthenticatedError(
+            message="Authentication required: No active session or token found."
+        )
 
     return verify_session_token(token)
 
@@ -66,7 +68,9 @@ async def get_current_user(
     user = result.scalar_one_or_none()
 
     if not user:
-        raise UnauthenticatedError(message="User account associated with this session no longer exists.")
+        raise UnauthenticatedError(
+            message="User account associated with this session no longer exists."
+        )
 
     if not user.is_active:
         raise ForbiddenError(message="User account has been deactivated.")

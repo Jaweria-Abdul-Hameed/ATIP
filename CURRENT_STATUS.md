@@ -1,8 +1,8 @@
 # ATIP — persistent agent checkpoint
 
-**State:** SETUP, M0, M1, and M2 IDENTITY, ORGANIZATIONS AND GITHUB COMPLETED AND VERIFIED.
-**Next action:** Phase M3 — repository mining and analysis (M3-01: Create immutable commit-specific repository snapshots and safe repository fetch without executing repo scripts).
-**Active phase:** Phase M2 completed; waiting at phase boundary for next Antigravity session to execute M3.
+**State:** SETUP, M0, M1, M2 COMPLETED; PHASE M3 IN PROGRESS (M3-01 verified).
+**Next action:** Phase M3 Task M3-02: Extract commits, diffs, file changes, ownership and change-frequency evidence.
+**Active phase:** Phase M3 — repository mining and analysis.
 **Last verified commit:** `6c9dfa3` (pushed to origin/main).
 **Current blockers:** None. No human intervention required.
 
@@ -36,9 +36,10 @@
 | 2026-10-21 10:28 | M2-04 | Signed GitHub webhook verification, replay protection, delivery dedup & outbox ingestion | `services/api/src/atip_api/modules/github/webhook.py`, `router.py`, `main.py`. HMAC-SHA256 signature enforcement, duplicate rejection, durable `OutboxEvent` ingestion. 39/39 pytest passed, ruff green. Exit code 0 | verified |
 | 2026-10-21 10:31 | M2-05 | Repository discovery, connect, sync, branch/PR selectors, pagination & tenant isolation | `services/api/src/atip_api/modules/repositories/`: `router.py`, `schemas.py`. Discovery/connect flow, branch & PR selectors, job & outbox creation, tenant isolation. 43/43 pytest passed, ruff green. Exit code 0 | verified |
 | 2026-10-21 10:40 | M2-06 | Wire Repositories/Settings screens to real APIs; permission/tenant, security & webhook tests | `apps/web/`: `api-client.ts`, `api-adapter.ts`, `repositories/page.tsx`, `settings/page.tsx`. `services/api/tests/test_security_audit.py`. Full monorepo tests (46/46 pytest, tsc, next lint, ruff) green, Next.js build (16/16 pages) successful. Exit code 0 | 6c9dfa3 |
+| 2026-10-21 11:00 | M3-01 | Safe Git fetcher, immutable snapshots, sandbox path traversal defense, Alembic migration | `services/api/src/atip_api/modules/mining/`: `git_fetcher.py`, `snapshot.py`, `router.py`, `schemas.py`, Alembic `ab78872c6988`. `services/api/tests/test_mining_snapshots.py`. 51/51 pytest passed, ruff green. Exit code 0 | verified |
 
 ## Service status summary
-- PostgreSQL: `localhost:5432` (`atip_db`) — healthy, migrated to revision `84ec37a4ad54`.
+- PostgreSQL: `localhost:5432` (`atip_db`) — healthy, migrated to revision `ab78872c6988`.
 - Redis: `localhost:6379/0` — healthy, ping operational.
 - RabbitMQ: `localhost:5672` (AMQP) & `localhost:15672` (Management) — healthy, robust connection verified.
 - MinIO: `localhost:9000` (S3) & `localhost:9001` (Console) — healthy, bucket `atip-artifacts` created and ready.

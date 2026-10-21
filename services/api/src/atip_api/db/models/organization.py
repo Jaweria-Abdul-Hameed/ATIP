@@ -175,4 +175,3 @@ class OrganizationInvitation(Base, TimestampMixin):
         "Organization", back_populates="invitations", lazy="selectin"
     )
     invited_by: Mapped["User"] = relationship("User", lazy="selectin")
-

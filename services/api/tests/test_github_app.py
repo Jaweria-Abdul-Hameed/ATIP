@@ -20,7 +20,11 @@ from atip_api.modules.identity.session import create_session_token
 
 
 async def _create_test_user_and_org(
-    db: AsyncSession, email: str, name: str, org_slug: str, role: MembershipRole = MembershipRole.ADMIN
+    db: AsyncSession,
+    email: str,
+    name: str,
+    org_slug: str,
+    role: MembershipRole = MembershipRole.ADMIN,
 ) -> tuple[User, Organization, str]:
     user = User(email=email, name=name, is_active=True)
     db.add(user)

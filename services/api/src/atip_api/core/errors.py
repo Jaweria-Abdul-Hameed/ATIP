@@ -39,6 +39,16 @@ class APIException(Exception):
         super().__init__(message)
 
 
+class BadRequestError(APIException):
+    def __init__(self, message: str = "Bad request", details: list[ErrorDetail] | None = None):
+        super().__init__(
+            code="BAD_REQUEST",
+            message=message,
+            status_code=status.HTTP_400_BAD_REQUEST,
+            details=details,
+        )
+
+
 class NotFoundError(APIException):
     def __init__(
         self, message: str = "Resource not found", details: list[ErrorDetail] | None = None

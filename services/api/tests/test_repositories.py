@@ -20,7 +20,11 @@ from atip_api.modules.identity.session import create_session_token
 
 
 async def _create_test_env(
-    db: AsyncSession, email: str, name: str, org_slug: str, role: MembershipRole = MembershipRole.ADMIN
+    db: AsyncSession,
+    email: str,
+    name: str,
+    org_slug: str,
+    role: MembershipRole = MembershipRole.ADMIN,
 ) -> tuple[User, Organization, str]:
     user = User(email=email, name=name, is_active=True)
     db.add(user)
@@ -96,9 +100,7 @@ async def test_repository_discovery_and_connect(
 
 
 @pytest.mark.asyncio
-async def test_repository_sync_and_outbox(
-    client: AsyncClient, db_session: AsyncSession
-) -> None:
+async def test_repository_sync_and_outbox(client: AsyncClient, db_session: AsyncSession) -> None:
     """Test repository sync endpoint queues job and creates outbox event."""
     _, org, token = await _create_test_env(
         db_session, "lead@atip.dev", "Lead", "sync-org", MembershipRole.DEVELOPER
@@ -147,9 +149,7 @@ async def test_repository_sync_and_outbox(
 
 
 @pytest.mark.asyncio
-async def test_branch_and_pr_selectors(
-    client: AsyncClient, db_session: AsyncSession
-) -> None:
+async def test_branch_and_pr_selectors(client: AsyncClient, db_session: AsyncSession) -> None:
     """Test branch and PR selectors return expected lists with default branches and commit SHAs."""
     _, org, token = await _create_test_env(
         db_session, "qa@atip.dev", "QA Engineer", "qa-org", MembershipRole.DEVELOPER
@@ -192,9 +192,7 @@ async def test_branch_and_pr_selectors(
 
 
 @pytest.mark.asyncio
-async def test_repository_tenant_isolation(
-    client: AsyncClient, db_session: AsyncSession
-) -> None:
+async def test_repository_tenant_isolation(client: AsyncClient, db_session: AsyncSession) -> None:
     """Test accessing a repository belonging to another tenant returns 404."""
     # Tenant 1
     _, org1, _ = await _create_test_env(

@@ -3,6 +3,14 @@
 from atip_api.db.base import Base, OrgScopedMixin, TimestampMixin
 from atip_api.db.models.audit import AuditEvent
 from atip_api.db.models.job import ExecutionJob, JobStatus, JobType
+from atip_api.db.models.mining import (
+    AnalysisRun,
+    AnalysisStatus,
+    ChangeType,
+    CommitRecord,
+    DependencyEdgeRecord,
+    FileChangeRecord,
+)
 from atip_api.db.models.organization import (
     ROLE_HIERARCHY,
     MembershipRole,
@@ -20,9 +28,15 @@ from atip_api.db.models.repository import (
 )
 
 __all__ = [
+    "AnalysisRun",
+    "AnalysisStatus",
     "AuditEvent",
     "Base",
+    "ChangeType",
+    "CommitRecord",
+    "DependencyEdgeRecord",
     "ExecutionJob",
+    "FileChangeRecord",
     "GitHubInstallation",
     "JobStatus",
     "JobType",

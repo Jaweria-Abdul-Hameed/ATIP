@@ -10,9 +10,7 @@ from atip_api.db.models.organization import (
 from atip_api.modules.identity.session import create_session_token
 
 
-async def _create_test_user_and_token(
-    db: AsyncSession, email: str, name: str
-) -> tuple[User, str]:
+async def _create_test_user_and_token(db: AsyncSession, email: str, name: str) -> tuple[User, str]:
     user = User(email=email, name=name, is_active=True)
     db.add(user)
     await db.commit()
@@ -26,9 +24,7 @@ async def test_create_organization_assigns_owner(
     client: AsyncClient, db_session: AsyncSession
 ) -> None:
     """Test creating an organization assigns the creator as Owner."""
-    user, token = await _create_test_user_and_token(
-        db_session, "creator@atip.dev", "Creator User"
-    )
+    user, token = await _create_test_user_and_token(db_session, "creator@atip.dev", "Creator User")
 
     response = await client.post(
         "/api/v1/organizations",
