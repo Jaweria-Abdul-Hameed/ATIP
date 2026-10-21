@@ -29,6 +29,7 @@
 | 2026-10-21 09:49 | M1-04 | API envelopes, pagination, request IDs, SSE | `DataResponse`, `PaginatedResponse`, `ResponseMeta`, `RequestIDMiddleware`, `TimingMiddleware`, `SecurityHeadersMiddleware`, `validation_exception_handler`, `sse_event_stream`. Verified in `tests/test_envelopes.py`, `test_sse.py`, `test_pagination.py`. Exit code 0 | verified |
 | 2026-10-21 09:51 | M1-05 | Typed frontend API client & backend-backed empty states | `apps/web/src/lib/api-client.ts`, `apps/web/src/lib/api-adapter.ts`, `/app` Overview & `/app/repositories` pages updated with live backend empty states + demo toggle. `pnpm typecheck:web` (0 errors), `pnpm lint:web` (0 errors), `pnpm build:web` (16/16 pages static compiled). Exit code 0 | verified |
 | 2026-10-21 09:54 | M1-06 | CI workflows, smoke tests & dev commands | `.github/workflows/ci.yml`, `scripts/compose_smoke_test.py`, root `package.json` dev scripts. `pnpm compose:smoke` verified live Postgres, Redis, RabbitMQ, MinIO. `pnpm test` (typecheck + 20 pytest passed), `pnpm lint` (next lint + ruff passed). Exit code 0 | verified |
+| 2026-10-21 10:00 | M1-CI | GitHub Actions CI remote verification | Automated CI run on GitHub passed for commit `58ff405` (Frontend quality/build + Backend lint/migrations/tests). Exit code 0 | 58ff405 |
 
 ## Service status summary
 - PostgreSQL: `localhost:5432` (`atip_db`) — healthy, migrated to revision `3fc2ba9b7847`.
