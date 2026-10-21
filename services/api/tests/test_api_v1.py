@@ -6,7 +6,19 @@ from httpx import AsyncClient
 
 @pytest.mark.asyncio
 async def test_get_current_user_profile(client: AsyncClient) -> None:
-    response = await client.get("/api/v1/me")
+    # Authenticate via OIDC login and callback
+    login_res = await client.get("/api/v1/auth/login")
+    state = login_res.json()["data"]["state"]
+    callback_res = await client.post(
+        "/api/v1/auth/callback",
+        json={"code": "mock_code_developer", "state": state},
+    )
+    token = callback_res.json()["data"]["token"]
+
+    response = await client.get(
+        "/api/v1/me",
+        headers={"Authorization": f"Bearer {token}"},
+    )
     assert response.status_code == 200
     data = response.json()
     assert data["data"]["email"] == "developer@atip.dev"

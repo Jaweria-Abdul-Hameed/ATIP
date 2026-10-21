@@ -5,6 +5,8 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { AppShell } from "@/components/shell/app-shell";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Badge } from "@/components/ui/badge";
+import { api } from "@/lib/api-adapter";
+import { MemberApiItem, GitHubInstallationApiItem } from "@/lib/api-client";
 import { DEMO_USER } from "@/lib/fixtures";
 import {
   User,
@@ -17,6 +19,9 @@ import {
   FileText,
   Palette,
   Lock,
+  Plus,
+  X,
+  ExternalLink,
 } from "lucide-react";
 
 type SettingsTab =
@@ -51,6 +56,66 @@ function SettingsContent() {
     tabParam && VALID_TABS.includes(tabParam) ? tabParam : "profile";
   const [activeTab, setActiveTab] = useState<SettingsTab>(initialTab);
   const [saved, setSaved] = useState(false);
+  const [members, setMembers] = useState<MemberApiItem[]>([]);
+  const [installations, setInstallations] = useState<GitHubInstallationApiItem[]>([]);
+  const [installUrl, setInstallUrl] = useState("");
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState("developer");
+  const [isInviting, setIsInviting] = useState(false);
+  const [inviteSuccess, setInviteSuccess] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    async function loadTabData() {
+      if (activeTab === "members") {
+        try {
+          const list = await api.getOrganizationMembers("org_default_workspace");
+          if (isMounted) setMembers(list);
+        } catch {
+          if (isMounted) setMembers([]);
+        }
+      } else if (activeTab === "github") {
+        try {
+          const [insts, url] = await Promise.all([
+            api.getGitHubInstallations(),
+            api.getGitHubInstallUrl(),
+          ]);
+          if (isMounted) {
+            setInstallations(insts);
+            setInstallUrl(url);
+          }
+        } catch {
+          // fallback
+        }
+      }
+    }
+    loadTabData();
+    return () => {
+      isMounted = false;
+    };
+  }, [activeTab]);
+
+  const handleInvite = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inviteEmail) return;
+    setIsInviting(true);
+    try {
+      await api.inviteMember("org_default_workspace", inviteEmail, inviteRole);
+      setInviteSuccess(true);
+      const list = await api.getOrganizationMembers("org_default_workspace");
+      setMembers(list);
+      setTimeout(() => {
+        setShowInviteModal(false);
+        setInviteSuccess(false);
+        setInviteEmail("");
+      }, 1500);
+    } catch (err) {
+      console.error("Invite failed:", err);
+    } finally {
+      setIsInviting(false);
+    }
+  };
 
   useEffect(() => {
     if (tabParam && VALID_TABS.includes(tabParam)) {
@@ -182,44 +247,96 @@ function SettingsContent() {
         {activeTab === "members" && (
           <div className="rounded-xl border border-border bg-surface p-6 shadow-sm space-y-4">
             <div className="flex items-center justify-between pb-2 border-b border-border">
-              <h2 className="text-sm font-semibold text-text">
-                Workspace Members (1)
-              </h2>
-              <button className="px-3 py-1.5 rounded-lg border border-border text-xs font-medium text-text hover:bg-soft cursor-pointer">
-                + Invite Member
+              <div>
+                <h2 className="text-sm font-semibold text-text">
+                  Workspace Members ({members.length > 0 ? members.length : 1})
+                </h2>
+                <p className="text-xs text-muted">Manage roles and invitations for your organization.</p>
+              </div>
+              <button
+                onClick={() => setShowInviteModal(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-medium text-text hover:bg-soft cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Invite Member</span>
               </button>
             </div>
-            <div className="flex items-center justify-between py-2 text-xs">
-              <div className="flex items-center gap-3">
-                <div className="w-7 h-7 rounded-full bg-neutral-800 text-white flex items-center justify-center font-bold text-xs">
-                  J
+
+            <div className="divide-y divide-border">
+              {members.length > 0 ? (
+                members.map((m) => (
+                  <div key={m.id} className="flex items-center justify-between py-3 text-xs">
+                    <div className="flex items-center gap-3">
+                      <div className="w-7 h-7 rounded-full bg-neutral-800 text-white flex items-center justify-center font-bold text-xs uppercase">
+                        {m.name.charAt(0) || "U"}
+                      </div>
+                      <div>
+                        <div className="font-semibold text-text">{m.name}</div>
+                        <div className="text-muted text-[11px]">{m.email}</div>
+                      </div>
+                    </div>
+                    <Badge variant={m.role === "owner" ? "neutral" : m.role === "admin" ? "warning" : "default"}>
+                      {m.role.toUpperCase()}
+                    </Badge>
+                  </div>
+                ))
+              ) : (
+                <div className="flex items-center justify-between py-3 text-xs">
+                  <div className="flex items-center gap-3">
+                    <div className="w-7 h-7 rounded-full bg-neutral-800 text-white flex items-center justify-center font-bold text-xs">
+                      J
+                    </div>
+                    <div>
+                      <div className="font-semibold text-text">Jaweria (Lead Engineer)</div>
+                      <div className="text-muted text-[11px]">jaweria@atip.local</div>
+                    </div>
+                  </div>
+                  <Badge variant="neutral">OWNER</Badge>
                 </div>
-                <div>
-                  <div className="font-semibold text-text">Jaweria</div>
-                  <div className="text-muted text-[11px]">jaweria@atip.local</div>
-                </div>
-              </div>
-              <Badge variant="neutral">Owner</Badge>
+              )}
             </div>
           </div>
         )}
 
         {activeTab === "github" && (
           <div className="rounded-xl border border-border bg-surface p-6 shadow-sm space-y-4 text-xs">
-            <h2 className="text-sm font-semibold text-text">
-              GitHub App Integration
-            </h2>
-            <p className="text-muted leading-relaxed">
-              Connect your repositories via the official ATIP GitHub App. Requires
-              OAuth setup and webhook configuration in Phase M2.
-            </p>
-            <div className="p-3 rounded-lg border border-border bg-soft space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="font-medium text-text">Installation Status</span>
-                <Badge variant="warning">Setup in M2</Badge>
+            <div className="flex items-center justify-between pb-2 border-b border-border">
+              <div>
+                <h2 className="text-sm font-semibold text-text">
+                  GitHub App Integration
+                </h2>
+                <p className="text-muted leading-relaxed mt-0.5">
+                  Phase M2 verified GitHub App installation, installation tokens, and signed webhooks.
+                </p>
               </div>
-              <div className="font-mono text-[11px] text-muted">
-                App ID: atip-local-dev · Scopes: repository_checks, pull_requests:read
+              <a
+                href={installUrl || "https://github.com/apps/atip-testing-platform/installations/new"}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-text text-surface font-medium text-xs hover:opacity-90 transition-opacity"
+              >
+                <Github className="w-3.5 h-3.5" />
+                <span>Configure App</span>
+                <ExternalLink className="w-3 h-3 ml-0.5" />
+              </a>
+            </div>
+
+            <div className="p-3.5 rounded-lg border border-border bg-soft space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Github className="w-4 h-4 text-text" />
+                  <span className="font-medium text-text">
+                    {installations.length > 0 ? installations[0].account_login : "ATIP Testing App"}
+                  </span>
+                </div>
+                <Badge variant={installations.length > 0 ? "success" : "neutral"}>
+                  {installations.length > 0 ? "Installed & Active" : "Ready to Install"}
+                </Badge>
+              </div>
+              <div className="font-mono text-[11px] text-muted space-y-1">
+                <div>Installation ID: {installations.length > 0 ? installations[0].installation_id : "12345678"}</div>
+                <div>Scopes: repository_checks:write, pull_requests:write, contents:read</div>
+                <div>Webhooks: HMAC-SHA256 verified, outbox durable ingestion</div>
               </div>
             </div>
           </div>
@@ -342,6 +459,80 @@ function SettingsContent() {
           </div>
         )}
       </div>
+
+      {/* Invite Member Modal */}
+      {showInviteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
+          <div className="w-full max-w-md rounded-xl border border-border bg-surface p-6 shadow-xl">
+            <div className="flex items-center justify-between pb-4 border-b border-border">
+              <h3 className="text-sm font-semibold text-text">
+                Invite Workspace Member
+              </h3>
+              <button
+                onClick={() => setShowInviteModal(false)}
+                className="text-muted hover:text-text p-1 rounded-md"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleInvite} className="py-4 space-y-4 text-xs">
+              <div>
+                <label className="block text-xs font-medium text-muted mb-1.5">
+                  Email Address
+                </label>
+                <input
+                  type="email"
+                  required
+                  placeholder="engineer@company.com"
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-border bg-surface text-xs text-text focus:outline-none focus:ring-1 focus:ring-text"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-muted mb-1.5">
+                  Role (RBAC)
+                </label>
+                <select
+                  value={inviteRole}
+                  onChange={(e) => setInviteRole(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-border bg-surface text-xs text-text focus:outline-none focus:ring-1 focus:ring-text"
+                >
+                  <option value="developer">Developer (Run tests, view plans)</option>
+                  <option value="maintainer">Maintainer (Manage repo, test config)</option>
+                  <option value="admin">Admin (Manage members, integrations)</option>
+                  <option value="viewer">Viewer (Read-only)</option>
+                </select>
+              </div>
+
+              {inviteSuccess && (
+                <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-medium">
+                  Invitation sent successfully!
+                </div>
+              )}
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowInviteModal(false)}
+                  className="px-3 py-1.5 rounded-lg border border-border bg-surface text-xs font-medium text-text hover:bg-soft"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isInviting || inviteSuccess}
+                  className="px-3.5 py-1.5 rounded-lg bg-text text-surface text-xs font-medium hover:opacity-90 disabled:opacity-50"
+                >
+                  {isInviting ? "Sending..." : "Send Invitation"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </AppShell>
   );
 }

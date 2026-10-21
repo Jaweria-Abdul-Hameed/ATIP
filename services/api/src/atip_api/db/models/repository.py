@@ -1,9 +1,10 @@
 """GitHubInstallation, Repository, and RepositorySnapshot entities."""
 
 import uuid
+from datetime import datetime
 from typing import TYPE_CHECKING, Any, Optional
 
-from sqlalchemy import JSON, Boolean, ForeignKey, Integer, String
+from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from atip_api.db.base import Base, OrgScopedMixin, TimestampMixin
@@ -29,6 +30,9 @@ class GitHubInstallation(Base, TimestampMixin, OrgScopedMixin):
         String(32), default="selected", nullable=False
     )
     permissions: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    encrypted_token: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    token_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
     # Relationships
     repositories: Mapped[list["Repository"]] = relationship(

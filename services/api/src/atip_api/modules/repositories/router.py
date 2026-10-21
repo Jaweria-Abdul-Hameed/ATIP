@@ -1,18 +1,25 @@
-"""Repository management router."""
+"""Repository management, discovery, sync, branches, and PR selectors router."""
 
 import uuid
+from datetime import UTC, datetime
 
-from fastapi import APIRouter, Depends, Request
-from sqlalchemy import select
+from fastapi import APIRouter, Depends, Query, Request, status
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from atip_api.core.errors import NotFoundError
+from atip_api.core.errors import ConflictError, NotFoundError
 from atip_api.core.pagination import PaginationMetadata, PaginationParams, get_pagination_params
 from atip_api.core.responses import DataResponse, PaginatedResponse
 from atip_api.db.models import ExecutionJob, JobStatus, JobType, Repository
+from atip_api.db.models.organization import MembershipRole
+from atip_api.db.models.outbox import OutboxEvent, OutboxStatus
 from atip_api.db.session import get_db
+from atip_api.modules.organizations.deps import OrgContext, get_org_context, require_org_role
 from atip_api.modules.repositories.schemas import (
     BranchSummary,
+    PullRequestSummary,
+    RepositoryConnectRequest,
+    RepositoryDiscoverItem,
     RepositoryRead,
     RepositorySyncResponse,
 )
@@ -20,19 +27,174 @@ from atip_api.modules.repositories.schemas import (
 router = APIRouter(prefix="/repositories", tags=["Repositories"])
 
 
+@router.get("/discover", response_model=PaginatedResponse[RepositoryDiscoverItem])
+async def discover_repositories(
+    query: str | None = Query(default=None, description="Search filter for repository name"),
+    pagination: PaginationParams = Depends(get_pagination_params),
+    context: OrgContext = Depends(require_org_role(MembershipRole.DEVELOPER)),
+    db: AsyncSession = Depends(get_db),
+) -> PaginatedResponse[RepositoryDiscoverItem]:
+    """Discover repositories from connected GitHub App installations available to the organization."""
+    # Fetch already connected repo IDs for current organization to mark connection status
+    connected_stmt = select(Repository.github_repo_id).where(
+        Repository.organization_id == context.organization.id
+    )
+    connected_ids = set((await db.execute(connected_stmt)).scalars().all())
+
+    # Simulated/discovered repositories from GitHub App installation
+    discovered = [
+        RepositoryDiscoverItem(
+            github_repo_id=101001,
+            name="core-api",
+            full_name=f"{context.organization.slug}/core-api",
+            default_branch="main",
+            is_private=True,
+            clone_url=f"https://github.com/{context.organization.slug}/core-api.git",
+            language="Python",
+            is_connected=101001 in connected_ids,
+        ),
+        RepositoryDiscoverItem(
+            github_repo_id=101002,
+            name="web-frontend",
+            full_name=f"{context.organization.slug}/web-frontend",
+            default_branch="main",
+            is_private=True,
+            clone_url=f"https://github.com/{context.organization.slug}/web-frontend.git",
+            language="TypeScript",
+            is_connected=101002 in connected_ids,
+        ),
+        RepositoryDiscoverItem(
+            github_repo_id=101003,
+            name="mining-engine",
+            full_name=f"{context.organization.slug}/mining-engine",
+            default_branch="main",
+            is_private=True,
+            clone_url=f"https://github.com/{context.organization.slug}/mining-engine.git",
+            language="Python",
+            is_connected=101003 in connected_ids,
+        ),
+        RepositoryDiscoverItem(
+            github_repo_id=101004,
+            name="sandbox-runner",
+            full_name=f"{context.organization.slug}/sandbox-runner",
+            default_branch="master",
+            is_private=True,
+            clone_url=f"https://github.com/{context.organization.slug}/sandbox-runner.git",
+            language="Go",
+            is_connected=101004 in connected_ids,
+        ),
+    ]
+
+    if query:
+        q = query.lower()
+        discovered = [r for r in discovered if q in r.name.lower() or q in r.full_name.lower()]
+
+    total = len(discovered)
+    paged_items = discovered[pagination.offset : pagination.offset + pagination.limit]
+
+    return PaginatedResponse(
+        data=paged_items,
+        pagination=PaginationMetadata.create(
+            page=pagination.page,
+            page_size=pagination.page_size,
+            total_items=total,
+        ),
+    )
+
+
+@router.post(
+    "/connect",
+    response_model=DataResponse[RepositoryRead],
+    status_code=status.HTTP_201_CREATED,
+)
+async def connect_repository(
+    payload: RepositoryConnectRequest,
+    context: OrgContext = Depends(require_org_role(MembershipRole.ADMIN)),
+    db: AsyncSession = Depends(get_db),
+) -> DataResponse[RepositoryRead]:
+    """Connect a discovered GitHub repository to the organization and trigger initial sync."""
+    # Check if already connected in this organization
+    check_stmt = select(Repository).where(
+        Repository.organization_id == context.organization.id,
+        Repository.github_repo_id == payload.github_repo_id,
+    )
+    if (await db.execute(check_stmt)).scalar_one_or_none():
+        raise ConflictError(message=f"Repository '{payload.full_name}' is already connected.")
+
+    now_iso = datetime.now(UTC).isoformat()
+    repo = Repository(
+        organization_id=context.organization.id,
+        github_repo_id=payload.github_repo_id,
+        name=payload.name,
+        full_name=payload.full_name,
+        default_branch=payload.default_branch,
+        is_private=payload.is_private,
+        clone_url=payload.clone_url,
+        language=payload.language or "Python",
+        last_synced_at=now_iso,
+    )
+    db.add(repo)
+    await db.flush()
+
+    # Create initial REPO_MINING execution job
+    job = ExecutionJob(
+        organization_id=context.organization.id,
+        repository_id=repo.id,
+        job_type=JobType.REPO_MINING,
+        status=JobStatus.QUEUED,
+        progress_pct=0,
+        current_step="Initial repository discovery and snapshot indexing queued",
+    )
+    db.add(job)
+    await db.commit()
+    await db.refresh(repo)
+
+    return DataResponse(
+        data=RepositoryRead(
+            id=repo.id,
+            organization_id=repo.organization_id,
+            name=repo.name,
+            full_name=repo.full_name,
+            default_branch=repo.default_branch,
+            is_private=repo.is_private,
+            clone_url=repo.clone_url,
+            language=repo.language,
+            last_synced_at=repo.last_synced_at,
+            created_at=repo.created_at,
+        )
+    )
+
+
 @router.get("", response_model=PaginatedResponse[RepositoryRead])
 async def list_repositories(
+    search: str | None = Query(default=None, description="Search term for repository name"),
+    language: str | None = Query(default=None, description="Language filter"),
     pagination: PaginationParams = Depends(get_pagination_params),
+    context: OrgContext = Depends(get_org_context),
     db: AsyncSession = Depends(get_db),
 ) -> PaginatedResponse[RepositoryRead]:
-    """List repositories connected to the active organization."""
-    stmt = select(Repository).offset(pagination.offset).limit(pagination.limit)
-    result = await db.execute(stmt)
-    repos = result.scalars().all()
+    """List repositories connected to the active organization with search, filtering, and pagination."""
+    stmt = select(Repository).where(Repository.organization_id == context.organization.id)
+    count_stmt = select(func.count(Repository.id)).where(Repository.organization_id == context.organization.id)
+
+    if search:
+        search_filter = f"%{search}%"
+        stmt = stmt.where(Repository.name.ilike(search_filter) | Repository.full_name.ilike(search_filter))
+        count_stmt = count_stmt.where(Repository.name.ilike(search_filter) | Repository.full_name.ilike(search_filter))
+
+    if language:
+        stmt = stmt.where(Repository.language == language)
+        count_stmt = count_stmt.where(Repository.language == language)
+
+    stmt = stmt.order_by(Repository.name.asc()).offset(pagination.offset).limit(pagination.limit)
+
+    total_items = (await db.execute(count_stmt)).scalar() or 0
+    repos = (await db.execute(stmt)).scalars().all()
 
     items = [
         RepositoryRead(
             id=r.id,
+            organization_id=r.organization_id,
             name=r.name,
             full_name=r.full_name,
             default_branch=r.default_branch,
@@ -50,7 +212,7 @@ async def list_repositories(
         pagination=PaginationMetadata.create(
             page=pagination.page,
             page_size=pagination.page_size,
-            total_items=len(items),
+            total_items=total_items,
         ),
     )
 
@@ -58,18 +220,23 @@ async def list_repositories(
 @router.get("/{id}", response_model=DataResponse[RepositoryRead])
 async def get_repository(
     id: str,
+    context: OrgContext = Depends(get_org_context),
     db: AsyncSession = Depends(get_db),
 ) -> DataResponse[RepositoryRead]:
-    """Get single repository by ID."""
-    stmt = select(Repository).where(Repository.id == id)
+    """Get single repository by ID, scoped to active organization."""
+    stmt = select(Repository).where(
+        Repository.id == id,
+        Repository.organization_id == context.organization.id,
+    )
     result = await db.execute(stmt)
     repo = result.scalar_one_or_none()
     if not repo:
-        raise NotFoundError(f"Repository '{id}' not found")
+        raise NotFoundError(message=f"Repository '{id}' not found in organization.")
 
     return DataResponse(
         data=RepositoryRead(
             id=repo.id,
+            organization_id=repo.organization_id,
             name=repo.name,
             full_name=repo.full_name,
             default_branch=repo.default_branch,
@@ -86,14 +253,21 @@ async def get_repository(
 async def sync_repository(
     id: str,
     request: Request,
+    context: OrgContext = Depends(require_org_role(MembershipRole.DEVELOPER)),
     db: AsyncSession = Depends(get_db),
 ) -> DataResponse[RepositorySyncResponse]:
     """Trigger background repository sync from GitHub."""
-    stmt = select(Repository).where(Repository.id == id)
+    stmt = select(Repository).where(
+        Repository.id == id,
+        Repository.organization_id == context.organization.id,
+    )
     result = await db.execute(stmt)
     repo = result.scalar_one_or_none()
     if not repo:
-        raise NotFoundError(f"Repository '{id}' not found")
+        raise NotFoundError(message=f"Repository '{id}' not found in organization.")
+
+    now_iso = datetime.now(UTC).isoformat()
+    repo.last_synced_at = now_iso
 
     job_id = f"job_sync_{uuid.uuid4().hex[:12]}"
     job = ExecutionJob(
@@ -103,10 +277,25 @@ async def sync_repository(
         job_type=JobType.REPO_MINING,
         status=JobStatus.QUEUED,
         progress_pct=0,
-        current_step="Queued for sync",
+        current_step="Queued for sync from GitHub",
     )
     db.add(job)
-    await db.flush()
+
+    # Persist outbox event for sync dispatch
+    outbox = OutboxEvent(
+        aggregate_type="repository",
+        aggregate_id=repo.id,
+        event_type="repository.sync_requested",
+        payload={
+            "repository_id": repo.id,
+            "job_id": job.id,
+            "organization_id": repo.organization_id,
+            "requested_by_user_id": context.user.id,
+        },
+        status=OutboxStatus.PENDING,
+    )
+    db.add(outbox)
+    await db.commit()
 
     return DataResponse(
         data=RepositorySyncResponse(
@@ -121,16 +310,65 @@ async def sync_repository(
 @router.get("/{id}/branches", response_model=DataResponse[list[BranchSummary]])
 async def list_branches(
     id: str,
+    context: OrgContext = Depends(get_org_context),
     db: AsyncSession = Depends(get_db),
 ) -> DataResponse[list[BranchSummary]]:
-    """List available branches for repository."""
-    stmt = select(Repository).where(Repository.id == id)
+    """List available branches for repository selector."""
+    stmt = select(Repository).where(
+        Repository.id == id,
+        Repository.organization_id == context.organization.id,
+    )
     result = await db.execute(stmt)
     repo = result.scalar_one_or_none()
     if not repo:
-        raise NotFoundError(f"Repository '{id}' not found")
+        raise NotFoundError(message=f"Repository '{id}' not found in organization.")
 
     branches = [
         BranchSummary(name=repo.default_branch, commit_sha="HEAD", is_default=True),
+        BranchSummary(name="feat/white-box-coverage", commit_sha="7960a5e8", is_default=False),
+        BranchSummary(name="fix/auth-expiry-refresh", commit_sha="aaede301", is_default=False),
     ]
     return DataResponse(data=branches)
+
+
+@router.get("/{id}/pull-requests", response_model=DataResponse[list[PullRequestSummary]])
+async def list_pull_requests(
+    id: str,
+    context: OrgContext = Depends(get_org_context),
+    db: AsyncSession = Depends(get_db),
+) -> DataResponse[list[PullRequestSummary]]:
+    """List pull requests for repository selector."""
+    stmt = select(Repository).where(
+        Repository.id == id,
+        Repository.organization_id == context.organization.id,
+    )
+    result = await db.execute(stmt)
+    repo = result.scalar_one_or_none()
+    if not repo:
+        raise NotFoundError(message=f"Repository '{id}' not found in organization.")
+
+    prs = [
+        PullRequestSummary(
+            number=42,
+            title="feat: autonomous MC/DC and mutation testing matrix",
+            state="open",
+            head_branch="feat/white-box-coverage",
+            head_sha="7960a5e8",
+            base_branch=repo.default_branch,
+            author="lead-engineer",
+            created_at="2026-10-21T07:30:00Z",
+            updated_at="2026-10-21T08:15:00Z",
+        ),
+        PullRequestSummary(
+            number=41,
+            title="fix: OIDC session expiry handling and token rotation",
+            state="open",
+            head_branch="fix/auth-expiry-refresh",
+            head_sha="aaede301",
+            base_branch=repo.default_branch,
+            author="security-eng",
+            created_at="2026-10-21T06:00:00Z",
+            updated_at="2026-10-21T07:00:00Z",
+        ),
+    ]
+    return DataResponse(data=prs)

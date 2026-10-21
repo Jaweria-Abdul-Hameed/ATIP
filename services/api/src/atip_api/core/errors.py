@@ -63,6 +63,34 @@ class UnauthorizedError(APIException):
         )
 
 
+class SessionExpiredError(APIException):
+    def __init__(
+        self,
+        message: str = "Session has expired. Please sign in again.",
+        details: list[ErrorDetail] | None = None,
+    ):
+        super().__init__(
+            code="SESSION_EXPIRED",
+            message=message,
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            details=details,
+        )
+
+
+class UnauthenticatedError(APIException):
+    def __init__(
+        self,
+        message: str = "Authentication required to access this resource",
+        details: list[ErrorDetail] | None = None,
+    ):
+        super().__init__(
+            code="UNAUTHENTICATED",
+            message=message,
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            details=details,
+        )
+
+
 class ForbiddenError(APIException):
     def __init__(self, message: str = "Access forbidden", details: list[ErrorDetail] | None = None):
         super().__init__(

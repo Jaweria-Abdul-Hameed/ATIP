@@ -96,6 +96,18 @@ def create_application() -> FastAPI:
     app.include_router(reports_router, prefix=v1_prefix)
     app.include_router(audit_router, prefix=v1_prefix)
 
+    # API v1 baseline alias route: /api/v1/webhooks/github
+    from atip_api.modules.github.router import receive_webhook
+
+    app.add_api_route(
+        f"{v1_prefix}/webhooks/github",
+        receive_webhook,
+        methods=["POST"],
+        status_code=202,
+        include_in_schema=True,
+        tags=["GitHub"],
+    )
+
     return app
 
 

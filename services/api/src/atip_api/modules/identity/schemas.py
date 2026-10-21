@@ -19,3 +19,26 @@ class UserProfile(BaseModel):
     )
     is_active: bool = Field(default=True)
     organizations: list[OrganizationSummary] = Field(default_factory=list)
+
+
+class AuthLoginResponse(BaseModel):
+    authorization_url: str
+    state: str
+
+
+class AuthCallbackRequest(BaseModel):
+    code: str = Field(..., min_length=1, description="OIDC authorization code")
+    state: str = Field(..., min_length=1, description="State nonce for CSRF validation")
+    redirect_uri: str | None = Field(default=None, description="Client redirect URI")
+
+
+class AuthSessionResponse(BaseModel):
+    authenticated: bool
+    user: UserProfile | None = None
+    token: str | None = None
+    expires_at: str | None = None
+
+
+class LogoutResponse(BaseModel):
+    success: bool = True
+    message: str = "Successfully logged out and session cleared."

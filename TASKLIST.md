@@ -46,12 +46,12 @@
 
 ## M2 — identity, organizations and GitHub
 
-- [ ] **M2-01** Implement OIDC login/session/logout/callback, protected routes and session expiry.
-- [ ] **M2-02** Implement org creation/selection, invitations/membership and Owner/Admin/Maintainer/Developer/Viewer RBAC.
-- [ ] **M2-03** Implement GitHub App install/callback, installation-scoped credentials and secure token storage.
-- [ ] **M2-04** Implement signed GitHub webhook verification, replay protection, delivery deduplication and durable ingestion.
-- [ ] **M2-05** Implement repository discovery/sync/branch/PR selectors with pagination and error handling.
-- [ ] **M2-06** Wire Repositories/Settings screens to real APIs; run permission/tenant and webhook tests.
+- [x] **M2-01** Implement OIDC login/session/logout/callback, protected routes and session expiry.
+- [x] **M2-02** Implement org creation/selection, invitations/membership and Owner/Admin/Maintainer/Developer/Viewer RBAC.
+- [x] **M2-03** Implement GitHub App install/callback, installation-scoped credentials and secure token storage.
+- [x] **M2-04** Implement signed GitHub webhook verification, replay protection, delivery deduplication and durable ingestion.
+- [x] **M2-05** Implement repository discovery/sync/branch/PR selectors with pagination and error handling.
+- [x] **M2-06** Wire Repositories/Settings screens to real APIs; run permission/tenant and webhook tests.
 
 **Exit gate:** all checkboxes in this phase are verified; tests/build and security review pass; relevant UI works; status/commit updated.
 

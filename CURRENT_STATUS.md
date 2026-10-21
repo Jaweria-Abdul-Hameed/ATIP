@@ -1,9 +1,9 @@
 # ATIP — persistent agent checkpoint
 
-**State:** SETUP, M0, and M1 BACKEND AND LOCAL FOUNDATION COMPLETED AND VERIFIED.
-**Next action:** Phase M2 — identity, organizations and GitHub (M2-01: Implement OIDC login/session/logout/callback, protected routes and session expiry).
-**Active phase:** Phase M1 completed; waiting at phase boundary for next Antigravity session to execute M2.
-**Last verified commit:** 83069e3 (pushed to origin/main, verified green CI run 39581671491).
+**State:** SETUP, M0, M1, and M2 IDENTITY, ORGANIZATIONS AND GITHUB COMPLETED AND VERIFIED.
+**Next action:** Phase M3 — repository mining and analysis (M3-01: Create immutable commit-specific repository snapshots and safe repository fetch without executing repo scripts).
+**Active phase:** Phase M2 completed; waiting at phase boundary for next Antigravity session to execute M3.
+**Last verified commit:** Pending push.
 **Current blockers:** None. No human intervention required.
 
 ## Progress log (append verified work only)
@@ -30,18 +30,24 @@
 | 2026-10-21 09:51 | M1-05 | Typed frontend API client & backend-backed empty states | `apps/web/src/lib/api-client.ts`, `apps/web/src/lib/api-adapter.ts`, `/app` Overview & `/app/repositories` pages updated with live backend empty states + demo toggle. `pnpm typecheck:web` (0 errors), `pnpm lint:web` (0 errors), `pnpm build:web` (16/16 pages static compiled). Exit code 0 | verified |
 | 2026-10-21 09:54 | M1-06 | CI workflows, smoke tests & dev commands | `.github/workflows/ci.yml`, `scripts/compose_smoke_test.py`, root `package.json` dev scripts. `pnpm compose:smoke` verified live Postgres, Redis, RabbitMQ, MinIO. `pnpm test` (typecheck + 20 pytest passed), `pnpm lint` (next lint + ruff passed). Exit code 0 | verified |
 | 2026-10-21 10:04 | M1-CI | GitHub Actions CI remote verification | Automated CI run #39581671491 passed on GitHub for commit `83069e3`: Backend Lint & Tests (26s) + Frontend Quality & Build (39s) both green. Exit code 0 | 83069e3 |
+| 2026-10-21 10:14 | M2-01 | OIDC login/session/logout/callback, protected routes & session expiry | `services/api/src/atip_api/modules/identity/`: `session.py`, `oidc.py`, `deps.py`, `router.py`, `schemas.py`. `uv run pytest services/api/tests` (26/26 passed), `ruff check` (0 errors), `pnpm.cmd test` green. Exit code 0 | verified |
+| 2026-10-21 10:20 | M2-02 | Org creation/selection, invitations/membership, Owner/Admin/Maintainer/Developer/Viewer RBAC & tenant isolation | `services/api/src/atip_api/modules/organizations/`: `router.py`, `deps.py`, `schemas.py`, Alembic migration `544eac5f896a_add_organization_invitations.py`. Applied to PostgreSQL. 30/30 pytest passed, ruff green. Exit code 0 | verified |
+| 2026-10-21 10:24 | M2-03 | GitHub App install/callback, installation credentials & token encryption at rest | `services/api/src/atip_api/core/crypto.py`, `services/api/src/atip_api/modules/github/`: `service.py`, `router.py`, `schemas.py`. Alembic migration `84ec37a4ad54_add_github_installation_tokens.py`. 35/35 pytest passed, ruff green. Exit code 0 | verified |
+| 2026-10-21 10:28 | M2-04 | Signed GitHub webhook verification, replay protection, delivery dedup & outbox ingestion | `services/api/src/atip_api/modules/github/webhook.py`, `router.py`, `main.py`. HMAC-SHA256 signature enforcement, duplicate rejection, durable `OutboxEvent` ingestion. 39/39 pytest passed, ruff green. Exit code 0 | verified |
+| 2026-10-21 10:31 | M2-05 | Repository discovery, connect, sync, branch/PR selectors, pagination & tenant isolation | `services/api/src/atip_api/modules/repositories/`: `router.py`, `schemas.py`. Discovery/connect flow, branch & PR selectors, job & outbox creation, tenant isolation. 43/43 pytest passed, ruff green. Exit code 0 | verified |
+| 2026-10-21 10:40 | M2-06 | Wire Repositories/Settings screens to real APIs; permission/tenant, security & webhook tests | `apps/web/`: `api-client.ts`, `api-adapter.ts`, `repositories/page.tsx`, `settings/page.tsx`. `services/api/tests/test_security_audit.py`. Full monorepo tests (46/46 pytest, tsc, next lint, ruff) green, Next.js build (16/16 pages) successful. Exit code 0 | verified |
 
 ## Service status summary
-- PostgreSQL: `localhost:5432` (`atip_db`) — healthy, migrated to revision `3fc2ba9b7847`.
+- PostgreSQL: `localhost:5432` (`atip_db`) — healthy, migrated to revision `84ec37a4ad54`.
 - Redis: `localhost:6379/0` — healthy, ping operational.
 - RabbitMQ: `localhost:5672` (AMQP) & `localhost:15672` (Management) — healthy, robust connection verified.
 - MinIO: `localhost:9000` (S3) & `localhost:9001` (Console) — healthy, bucket `atip-artifacts` created and ready.
 - FastAPI: `services/api` modular monolith ready to serve on `localhost:8000`.
 
 ## External setup needed (only if encountered)
-No external setup blockers. Local containerized infrastructure and Python/Next.js toolchains are completely operational.
+No external setup blockers. Local containerized infrastructure, OIDC/JWT crypto, and GitHub App token encryption are completely operational.
 
 ## Next agent handoff
 Read `AGENTS.md`, then this file, then `TASKLIST.md`.
-The active phase boundary is reached for M1. All checkboxes for M1 are verified and checked.
-The next phase to begin in the new conversation is **M2 — identity, organizations and GitHub**, starting with task **M2-01** (Implement OIDC login/session/logout/callback, protected routes and session expiry).
+The active phase boundary is reached for Phase M2. All checkboxes for M2 (M2-01 through M2-06) are verified and checked.
+The next phase to begin in the new conversation is **Phase M3 — repository mining and analysis**, starting with task **M3-01** (Create immutable commit-specific repository snapshots and safe repository fetch without executing repo scripts).

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { AppShell } from "@/components/shell/app-shell";
 import { Badge } from "@/components/ui/badge";
 import { api } from "@/lib/api-adapter";
+import { DiscoveredRepositoryApiItem } from "@/lib/api-client";
 import { Repository } from "@/types";
 import {
   Search,
@@ -30,6 +31,49 @@ export default function RepositoriesPage() {
   const [useLiveBackend, setUseLiveBackend] = useState(true);
   const [repositories, setRepositories] = useState<Repository[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [discoveredRepos, setDiscoveredRepos] = useState<DiscoveredRepositoryApiItem[]>([]);
+  const [isDiscovering, setIsDiscovering] = useState(false);
+  const [isConnecting, setIsConnecting] = useState<number | null>(null);
+
+  const fetchDiscovered = async () => {
+    setIsDiscovering(true);
+    try {
+      const items = await api.discoverRepositories();
+      setDiscoveredRepos(items);
+    } catch {
+      setDiscoveredRepos([]);
+    } finally {
+      setIsDiscovering(false);
+    }
+  };
+
+  useEffect(() => {
+    if (showConnectModal) {
+      fetchDiscovered();
+    }
+  }, [showConnectModal]);
+
+  const handleConnect = async (repo: DiscoveredRepositoryApiItem) => {
+    setIsConnecting(repo.github_repo_id);
+    try {
+      await api.connectRepository({
+        github_repo_id: repo.github_repo_id,
+        name: repo.name,
+        full_name: repo.full_name,
+        default_branch: repo.default_branch,
+        is_private: repo.is_private,
+        clone_url: repo.clone_url,
+        language: repo.language,
+      });
+      const updated = await api.getRepositories({ forceLive: true });
+      setRepositories(updated);
+      setShowConnectModal(false);
+    } catch (err) {
+      console.error("Failed to connect repository:", err);
+    } finally {
+      setIsConnecting(null);
+    }
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -277,9 +321,41 @@ export default function RepositoriesPage() {
                 Connect a GitHub repository to enable autonomous test intelligence.
                 Installation management and webhook sync are powered by Phase M2 GitHub integration.
               </p>
-              <div className="p-3 rounded-lg border border-border bg-soft text-xs text-muted space-y-1">
-                <div className="font-semibold text-text">Backend Status</div>
-                <div>FastAPI and PostgreSQL database are healthy and listening.</div>
+
+              <div className="space-y-2">
+                <div className="text-xs font-semibold text-text">Discovered from GitHub App</div>
+                {isDiscovering ? (
+                  <div className="text-xs text-muted py-4 text-center">Discovering available repositories...</div>
+                ) : discoveredRepos.length === 0 ? (
+                  <div className="p-3 rounded-lg border border-border bg-soft text-xs text-muted">
+                    No new repositories discovered. Verify GitHub App installation.
+                  </div>
+                ) : (
+                  <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                    {discoveredRepos.map((repo) => (
+                      <div
+                        key={repo.github_repo_id}
+                        className="flex items-center justify-between p-2.5 rounded-lg border border-border bg-soft text-xs"
+                      >
+                        <div className="min-w-0 pr-2">
+                          <div className="font-semibold text-text truncate">{repo.name}</div>
+                          <div className="text-[11px] text-muted truncate">{repo.full_name} • {repo.language || "Code"}</div>
+                        </div>
+                        {repo.is_connected ? (
+                          <Badge variant="neutral">Connected</Badge>
+                        ) : (
+                          <button
+                            onClick={() => handleConnect(repo)}
+                            disabled={isConnecting === repo.github_repo_id}
+                            className="px-2.5 py-1 rounded bg-text text-surface font-medium text-[11px] hover:opacity-90 transition-opacity disabled:opacity-50 cursor-pointer"
+                          >
+                            {isConnecting === repo.github_repo_id ? "Connecting..." : "Connect"}
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 

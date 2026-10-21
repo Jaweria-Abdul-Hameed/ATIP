@@ -112,4 +112,71 @@ export const api = {
   getAIInvestigation: async (): Promise<AIAnalysisInvestigation> => {
     return DEMO_AI_INVESTIGATION;
   },
+
+  // Repositories discovery, connect, and selectors
+  discoverRepositories: async (query?: string) => {
+    try {
+      const res = await apiClient.discoverRepositories(query);
+      return res.data;
+    } catch {
+      return [];
+    }
+  },
+
+  connectRepository: async (repo: {
+    github_repo_id: number;
+    name: string;
+    full_name: string;
+    default_branch: string;
+    is_private: boolean;
+    clone_url: string;
+    language?: string | null;
+  }) => {
+    return apiClient.connectRepository(repo);
+  },
+
+  getBranches: async (repoId: string) => {
+    try {
+      return await apiClient.getRepositoryBranches(repoId);
+    } catch {
+      return [{ name: "main", commit_sha: "HEAD", is_default: true }];
+    }
+  },
+
+  getPullRequests: async (repoId: string) => {
+    try {
+      return await apiClient.getRepositoryPullRequests(repoId);
+    } catch {
+      return [];
+    }
+  },
+
+  // Organizations & Settings
+  getOrganizationMembers: async (orgId: string) => {
+    try {
+      return await apiClient.getOrganizationMembers(orgId);
+    } catch {
+      return [];
+    }
+  },
+
+  inviteMember: async (orgId: string, email: string, role: string) => {
+    return apiClient.inviteMember(orgId, email, role);
+  },
+
+  getGitHubInstallations: async () => {
+    try {
+      return await apiClient.getGitHubInstallations();
+    } catch {
+      return [];
+    }
+  },
+
+  getGitHubInstallUrl: async () => {
+    try {
+      return await apiClient.getGitHubInstallUrl();
+    } catch {
+      return "https://github.com/apps/atip-testing-platform/installations/new";
+    }
+  },
 };
