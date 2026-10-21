@@ -3,7 +3,7 @@
 **State:** SETUP and M0 UI-FIRST COMPLETED AND VERIFIED.
 **Next action:** Phase M1 — backend and local foundation (M1-01: Scaffold FastAPI modular monolith, OpenAPI schemas, Python uv lock, lint/type/test).
 **Active phase:** Phase M0 completed; waiting at phase boundary for next Antigravity session to execute M1.
-**Last verified commit:** 27da4c6 (pushed to origin/main).
+**Last verified commit:** 7960a5e (pushed to origin/main).
 **Current blockers:** None. No human intervention required.
 
 ## Progress log (append verified work only)
