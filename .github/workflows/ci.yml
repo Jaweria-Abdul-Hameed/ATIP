@@ -1,0 +1,95 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  frontend:
+    name: Frontend Quality & Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.21.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck Next.js App
+        run: pnpm --filter @atip/web typecheck
+
+      - name: Lint Next.js App
+        run: pnpm --filter @atip/web lint
+
+      - name: Build Next.js Production Bundle
+        run: pnpm --filter @atip/web build
+
+  backend:
+    name: Backend Lint & Tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: atip_db
+          POSTGRES_USER: atip
+          POSTGRES_PASSWORD: atip_dev_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: "0.12.18"
+
+      - name: Install Python dependencies
+        run: uv sync --project services/api
+
+      - name: Check code formatting (Ruff)
+        run: uv run --project services/api ruff format --check services/api/src services/api/tests
+
+      - name: Lint codebase (Ruff)
+        run: uv run --project services/api ruff check services/api/src services/api/tests
+
+      - name: Run Alembic migrations
+        run: uv run --project services/api alembic --config services/api/alembic.ini upgrade head
+
+      - name: Run Pytest test suite
+        run: uv run --project services/api pytest services/api/tests -v

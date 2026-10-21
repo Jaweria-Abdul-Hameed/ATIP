@@ -1,18 +1,21 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { AppShell } from "@/components/shell/app-shell";
 import { Badge } from "@/components/ui/badge";
-import { DEMO_REPOSITORIES } from "@/lib/fixtures";
+import { api } from "@/lib/api-adapter";
+import { Repository } from "@/types";
 import {
   Search,
   Plus,
-  MoreVertical,
   ChevronDown,
   FolderGit2,
   FileCode2,
   RotateCw,
+  X,
+  Database,
+  Server,
 } from "lucide-react";
 
 export default function RepositoriesPage() {
@@ -24,8 +27,32 @@ export default function RepositoriesPage() {
     "lastSynced"
   );
   const [showConnectModal, setShowConnectModal] = useState(false);
+  const [useLiveBackend, setUseLiveBackend] = useState(true);
+  const [repositories, setRepositories] = useState<Repository[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const filteredRepos = DEMO_REPOSITORIES.filter((repo) => {
+  useEffect(() => {
+    let isMounted = true;
+    async function loadRepos() {
+      setIsLoading(true);
+      try {
+        const repos = await api.getRepositories({ forceLive: useLiveBackend });
+        if (isMounted) {
+          setRepositories(repos);
+        }
+      } catch (e) {
+        if (isMounted) setRepositories([]);
+      } finally {
+        if (isMounted) setIsLoading(false);
+      }
+    }
+    loadRepos();
+    return () => {
+      isMounted = false;
+    };
+  }, [useLiveBackend]);
+
+  const filteredRepos = repositories.filter((repo) => {
     const matchesSearch =
       repo.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       repo.fullName.toLowerCase().includes(searchQuery.toLowerCase());
@@ -40,6 +67,25 @@ export default function RepositoriesPage() {
       {/* Header matching 02_Repositories.png */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-2 pb-6">
         <div>
+          <div className="flex items-center gap-2 mb-2">
+            <button
+              onClick={() => setUseLiveBackend(!useLiveBackend)}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium border border-border bg-surface text-muted hover:text-text transition-colors cursor-pointer"
+              title="Click to toggle between live FastAPI PostgreSQL backend and demo fixtures"
+            >
+              {useLiveBackend ? (
+                <>
+                  <Database className="w-3 h-3 text-emerald-500" />
+                  <span>Backend: Live PostgreSQL</span>
+                </>
+              ) : (
+                <>
+                  <Server className="w-3 h-3 text-amber-500" />
+                  <span>Backend: Demo Fixtures</span>
+                </>
+              )}
+            </button>
+          </div>
           <h1 className="font-serif text-3xl sm:text-4xl font-normal tracking-tight text-text">
             Repositories
           </h1>
@@ -69,7 +115,7 @@ export default function RepositoriesPage() {
               : "text-muted hover:text-text"
           }`}
         >
-          All ({DEMO_REPOSITORIES.length})
+          All ({repositories.length})
         </button>
         <button
           onClick={() => setActiveTab("connected")}
@@ -79,7 +125,7 @@ export default function RepositoriesPage() {
               : "text-muted hover:text-text"
           }`}
         >
-          Connected ({DEMO_REPOSITORIES.length})
+          Connected ({repositories.filter((r) => r.status === "connected" || r.status === "ready").length})
         </button>
         <button
           onClick={() => setActiveTab("syncing")}
@@ -89,7 +135,7 @@ export default function RepositoriesPage() {
               : "text-muted hover:text-text"
           }`}
         >
-          Syncing (0)
+          Syncing ({repositories.filter((r) => r.status === "syncing").length})
         </button>
       </div>
 
@@ -110,7 +156,7 @@ export default function RepositoriesPage() {
           <div className="relative">
             <select
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as any)}
+              onChange={(e) => setSortBy(e.target.value as "lastSynced" | "riskScore" | "name")}
               className="appearance-none pl-3 pr-8 py-2 rounded-lg border border-border bg-surface text-xs font-medium text-text focus:outline-none focus:ring-1 focus:ring-text cursor-pointer"
             >
               <option value="lastSynced">Last synced</option>
@@ -122,11 +168,39 @@ export default function RepositoriesPage() {
         </div>
       </div>
 
-      {/* Repository Cards List */}
+      {/* Repository Cards List or Empty State */}
       <div className="space-y-3">
-        {filteredRepos.length === 0 ? (
+        {repositories.length === 0 && !isLoading ? (
+          <div className="text-center py-16 px-6 rounded-xl border border-dashed border-border bg-surface flex flex-col items-center justify-center">
+            <div className="p-3 rounded-full bg-soft text-muted mb-4">
+              <FolderGit2 className="w-6 h-6" />
+            </div>
+            <h3 className="font-serif text-lg font-medium text-text mb-1">
+              No repositories connected yet
+            </h3>
+            <p className="text-xs text-muted max-w-sm mb-6 leading-relaxed">
+              Your PostgreSQL database has no repository records. Connect a repository
+              or explore our demo fixtures to preview intelligence features.
+            </p>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setShowConnectModal(true)}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-text text-surface font-medium text-xs hover:opacity-90 transition-opacity shadow-sm cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Connect Repository</span>
+              </button>
+              <button
+                onClick={() => setUseLiveBackend(false)}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg border border-border bg-surface text-text font-medium text-xs hover:bg-soft transition-colors cursor-pointer"
+              >
+                <span>Explore Demo Repositories</span>
+              </button>
+            </div>
+          </div>
+        ) : filteredRepos.length === 0 && !isLoading ? (
           <div className="text-center py-12 rounded-xl border border-border bg-surface text-muted text-xs">
-            No repositories found matching your query.
+            No repositories found matching &quot;{searchQuery}&quot;.
           </div>
         ) : (
           filteredRepos.map((repo) => (
@@ -156,16 +230,26 @@ export default function RepositoriesPage() {
                   <span>{repo.lastSynced}</span>
                 </div>
 
-                <button
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                  }}
-                  className="p-1 rounded-md text-muted hover:text-text transition-colors"
-                  aria-label="Repository options"
-                >
-                  <MoreVertical className="w-4 h-4" />
-                </button>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-semibold text-text">
+                    Score: {repo.riskScore}
+                  </span>
+                  <Badge
+                    variant={
+                      repo.riskScore > 70
+                        ? "error"
+                        : repo.riskScore > 40
+                          ? "warning"
+                          : "neutral"
+                    }
+                  >
+                    {repo.riskScore > 70
+                      ? "High"
+                      : repo.riskScore > 40
+                        ? "Medium"
+                        : "Low"}
+                  </Badge>
+                </div>
               </div>
             </Link>
           ))
@@ -176,19 +260,44 @@ export default function RepositoriesPage() {
       {showConnectModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
           <div className="w-full max-w-md rounded-xl border border-border bg-surface p-6 shadow-xl">
-            <h3 className="text-sm font-semibold text-text pb-2">
-              Connect Repository
-            </h3>
-            <p className="text-xs text-muted leading-relaxed pb-4">
-              Real GitHub App installation integration is provisioned in Phase
-              M2. Currently showing verified local workspace fixtures.
-            </p>
-            <div className="flex justify-end gap-2">
+            <div className="flex items-center justify-between pb-4 border-b border-border">
+              <h3 className="text-sm font-semibold text-text">
+                Connect GitHub Repository
+              </h3>
+              <button
+                onClick={() => setShowConnectModal(false)}
+                className="text-muted hover:text-text p-1 rounded-md"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="py-4 space-y-3">
+              <p className="text-xs text-muted leading-relaxed">
+                Connect a GitHub repository to enable autonomous test intelligence.
+                Installation management and webhook sync are powered by Phase M2 GitHub integration.
+              </p>
+              <div className="p-3 rounded-lg border border-border bg-soft text-xs text-muted space-y-1">
+                <div className="font-semibold text-text">Backend Status</div>
+                <div>FastAPI and PostgreSQL database are healthy and listening.</div>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
               <button
                 onClick={() => setShowConnectModal(false)}
                 className="px-3 py-1.5 rounded-lg border border-border bg-surface text-xs font-medium text-text hover:bg-soft"
               >
                 Close
+              </button>
+              <button
+                onClick={() => {
+                  setShowConnectModal(false);
+                  setUseLiveBackend(false);
+                }}
+                className="px-3.5 py-1.5 rounded-lg bg-text text-surface text-xs font-medium hover:opacity-90"
+              >
+                Load Demo Repositories
               </button>
             </div>
           </div>

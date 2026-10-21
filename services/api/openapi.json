@@ -1,0 +1,3020 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "ATIP API",
+    "description": "ATIP \u2014 Autonomous Testing Intelligence Platform Backend Modular Monolith API",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/healthz": {
+      "get": {
+        "tags": [
+          "Health"
+        ],
+        "summary": "Healthz",
+        "description": "Liveness probe returning application status and version.",
+        "operationId": "healthz_healthz_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_HealthStatus_"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/readyz": {
+      "get": {
+        "tags": [
+          "Health"
+        ],
+        "summary": "Readyz",
+        "description": "Readiness probe checking backing services availability.",
+        "operationId": "readyz_readyz_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_ReadinessStatus_"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me": {
+      "get": {
+        "tags": [
+          "Identity"
+        ],
+        "summary": "Get Current User",
+        "description": "Retrieve profile and organizations for the authenticated user.",
+        "operationId": "get_current_user_api_v1_me_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_UserProfile_"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/organizations": {
+      "get": {
+        "tags": [
+          "Organizations"
+        ],
+        "summary": "List Organizations",
+        "description": "List organizations accessible to the current user.",
+        "operationId": "list_organizations_api_v1_organizations_get",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Page number starting from 1",
+              "default": 1,
+              "title": "Page"
+            },
+            "description": "Page number starting from 1"
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "description": "Items per page (max 100)",
+              "default": 20,
+              "title": "Page Size"
+            },
+            "description": "Items per page (max 100)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_OrganizationRead_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Organizations"
+        ],
+        "summary": "Create Organization",
+        "description": "Create a new organization.",
+        "operationId": "create_organization_api_v1_organizations_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrganizationCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_OrganizationRead_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/organizations/{id}": {
+      "get": {
+        "tags": [
+          "Organizations"
+        ],
+        "summary": "Get Organization",
+        "description": "Get organization by ID.",
+        "operationId": "get_organization_api_v1_organizations__id__get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_OrganizationRead_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/repositories": {
+      "get": {
+        "tags": [
+          "Repositories"
+        ],
+        "summary": "List Repositories",
+        "description": "List repositories connected to the active organization.",
+        "operationId": "list_repositories_api_v1_repositories_get",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Page number starting from 1",
+              "default": 1,
+              "title": "Page"
+            },
+            "description": "Page number starting from 1"
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "description": "Items per page (max 100)",
+              "default": 20,
+              "title": "Page Size"
+            },
+            "description": "Items per page (max 100)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_RepositoryRead_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/repositories/{id}": {
+      "get": {
+        "tags": [
+          "Repositories"
+        ],
+        "summary": "Get Repository",
+        "description": "Get single repository by ID.",
+        "operationId": "get_repository_api_v1_repositories__id__get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_RepositoryRead_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/repositories/{id}/sync": {
+      "post": {
+        "tags": [
+          "Repositories"
+        ],
+        "summary": "Sync Repository",
+        "description": "Trigger background repository sync from GitHub.",
+        "operationId": "sync_repository_api_v1_repositories__id__sync_post",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_RepositorySyncResponse_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/repositories/{id}/branches": {
+      "get": {
+        "tags": [
+          "Repositories"
+        ],
+        "summary": "List Branches",
+        "description": "List available branches for repository.",
+        "operationId": "list_branches_api_v1_repositories__id__branches_get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_list_BranchSummary__"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/github/installations": {
+      "get": {
+        "tags": [
+          "GitHub"
+        ],
+        "summary": "List Installations",
+        "description": "List active GitHub App installations for organization.",
+        "operationId": "list_installations_api_v1_github_installations_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_list_GitHubInstallationSummary__"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/github/webhooks": {
+      "post": {
+        "tags": [
+          "GitHub"
+        ],
+        "summary": "Receive Webhook",
+        "description": "Ingest GitHub signed webhooks with raw body verification and deduplication.",
+        "operationId": "receive_webhook_api_v1_github_webhooks_post",
+        "parameters": [
+          {
+            "name": "X-GitHub-Event",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "X-Github-Event"
+            }
+          },
+          {
+            "name": "X-GitHub-Delivery",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "X-Github-Delivery"
+            }
+          },
+          {
+            "name": "X-Hub-Signature-256",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Hub-Signature-256"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_WebhookReceiptResponse_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/repositories/{id}/analyses": {
+      "post": {
+        "tags": [
+          "Mining & Analysis"
+        ],
+        "summary": "Trigger Analysis",
+        "description": "Trigger repository mining and static analysis job.",
+        "operationId": "trigger_analysis_api_v1_repositories__id__analyses_post",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnalysisTriggerRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_AnalysisJobRead_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/analyses/{id}": {
+      "get": {
+        "tags": [
+          "Mining & Analysis"
+        ],
+        "summary": "Get Analysis",
+        "description": "Get analysis job status and progress.",
+        "operationId": "get_analysis_api_v1_analyses__id__get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_AnalysisJobRead_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/analyses/{id}/events": {
+      "get": {
+        "tags": [
+          "Mining & Analysis"
+        ],
+        "summary": "Stream Analysis Events",
+        "description": "Stream real-time analysis progress events via Server-Sent Events (SSE).",
+        "operationId": "stream_analysis_events_api_v1_analyses__id__events_get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/repositories/{id}/risks": {
+      "get": {
+        "tags": [
+          "Risk Intelligence"
+        ],
+        "summary": "Get Repository Risks",
+        "description": "Get versioned explainable risk score and ranked files for repository.",
+        "operationId": "get_repository_risks_api_v1_repositories__id__risks_get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_RepositoryRiskSummary_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/repositories/{id}/whitebox-analyses": {
+      "post": {
+        "tags": [
+          "White-Box Coverage"
+        ],
+        "summary": "Trigger Whitebox Analysis",
+        "description": "Trigger full AST/CFG objective discovery and white-box analysis.",
+        "operationId": "trigger_whitebox_analysis_api_v1_repositories__id__whitebox_analyses_post",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_dict_str__Any__"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/whitebox-analyses/{id}/coverage": {
+      "get": {
+        "tags": [
+          "White-Box Coverage"
+        ],
+        "summary": "Get Whitebox Coverage",
+        "description": "Get 11-technique white-box coverage matrix and evidence summary.",
+        "operationId": "get_whitebox_coverage_api_v1_whitebox_analyses__id__coverage_get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_WhiteboxCoverageSummary_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/whitebox-analyses/{id}/objectives": {
+      "get": {
+        "tags": [
+          "White-Box Coverage"
+        ],
+        "summary": "List Objectives",
+        "description": "List static coverage objectives with status and proof evidence.",
+        "operationId": "list_objectives_api_v1_whitebox_analyses__id__objectives_get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          },
+          {
+            "name": "kind",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Kind"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Page number starting from 1",
+              "default": 1,
+              "title": "Page"
+            },
+            "description": "Page number starting from 1"
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "description": "Items per page (max 100)",
+              "default": 20,
+              "title": "Page Size"
+            },
+            "description": "Items per page (max 100)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_WhiteboxObjective_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/whitebox-analyses/{id}/gaps": {
+      "get": {
+        "tags": [
+          "White-Box Coverage"
+        ],
+        "summary": "Get Coverage Gaps",
+        "description": "Retrieve uncovered and infeasible coverage gaps.",
+        "operationId": "get_coverage_gaps_api_v1_whitebox_analyses__id__gaps_get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_dict_str__Any__"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/test-plans": {
+      "get": {
+        "tags": [
+          "Test Plans"
+        ],
+        "summary": "List Test Plans",
+        "description": "List test plans with review status.",
+        "operationId": "list_test_plans_api_v1_test_plans_get",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Page number starting from 1",
+              "default": 1,
+              "title": "Page"
+            },
+            "description": "Page number starting from 1"
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "description": "Items per page (max 100)",
+              "default": 20,
+              "title": "Page Size"
+            },
+            "description": "Items per page (max 100)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_TestPlanRead_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/test-plans/{id}": {
+      "get": {
+        "tags": [
+          "Test Plans"
+        ],
+        "summary": "Get Test Plan",
+        "description": "Get single test plan by ID.",
+        "operationId": "get_test_plan_api_v1_test_plans__id__get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_TestPlanRead_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/test-plans/{id}/approve": {
+      "post": {
+        "tags": [
+          "Test Plans"
+        ],
+        "summary": "Approve Test Plan",
+        "description": "Server-side human approval gate for test plans before execution.",
+        "operationId": "approve_test_plan_api_v1_test_plans__id__approve_post",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_ApprovalResponse_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/test-runs": {
+      "get": {
+        "tags": [
+          "Test Runs & Execution"
+        ],
+        "summary": "List Test Runs",
+        "description": "List execution test runs.",
+        "operationId": "list_test_runs_api_v1_test_runs_get",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Page number starting from 1",
+              "default": 1,
+              "title": "Page"
+            },
+            "description": "Page number starting from 1"
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "description": "Items per page (max 100)",
+              "default": 20,
+              "title": "Page Size"
+            },
+            "description": "Items per page (max 100)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_TestRunRead_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/test-runs/{id}": {
+      "get": {
+        "tags": [
+          "Test Runs & Execution"
+        ],
+        "summary": "Get Test Run",
+        "description": "Get single test run details.",
+        "operationId": "get_test_run_api_v1_test_runs__id__get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_TestRunRead_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution-jobs/{id}/cancel": {
+      "post": {
+        "tags": [
+          "Test Runs & Execution"
+        ],
+        "summary": "Cancel Execution Job",
+        "description": "Cancel in-flight execution job and release sandbox resources.",
+        "operationId": "cancel_execution_job_api_v1_execution_jobs__id__cancel_post",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_JobCancelResponse_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/analysis/triage": {
+      "post": {
+        "tags": [
+          "AI Failure Analysis"
+        ],
+        "summary": "Triage Failure",
+        "description": "Analyze test failure with citation-grounded hypothesis.",
+        "operationId": "triage_failure_api_v1_analysis_triage_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TriageRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_TriageResponse_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/reports": {
+      "get": {
+        "tags": [
+          "Reports & Analytics"
+        ],
+        "summary": "Get Quality Report",
+        "description": "Retrieve aggregate test reliability, duration trends, and coverage history.",
+        "operationId": "get_quality_report_api_v1_reports_get",
+        "parameters": [
+          {
+            "name": "repository_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "all",
+              "title": "Repository Id"
+            }
+          },
+          {
+            "name": "timeframe",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "30d",
+              "title": "Timeframe"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_QualityReportSummary_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/audit/events": {
+      "get": {
+        "tags": [
+          "Audit Trail"
+        ],
+        "summary": "List Audit Events",
+        "description": "Retrieve tenant audit log events.",
+        "operationId": "list_audit_events_api_v1_audit_events_get",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Page number starting from 1",
+              "default": 1,
+              "title": "Page"
+            },
+            "description": "Page number starting from 1"
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "description": "Items per page (max 100)",
+              "default": 20,
+              "title": "Page Size"
+            },
+            "description": "Items per page (max 100)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_AuditEventRead_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AnalysisJobRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "repository_id": {
+            "type": "string",
+            "title": "Repository Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "default": "running"
+          },
+          "progress_pct": {
+            "type": "integer",
+            "title": "Progress Pct",
+            "default": 0
+          },
+          "current_step": {
+            "type": "string",
+            "title": "Current Step",
+            "default": "Initializing repository checkout"
+          },
+          "commit_sha": {
+            "type": "string",
+            "title": "Commit Sha",
+            "default": "HEAD"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "repository_id"
+        ],
+        "title": "AnalysisJobRead"
+      },
+      "AnalysisTriggerRequest": {
+        "properties": {
+          "commit_sha": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Commit Sha",
+            "example": "7960a5e8"
+          },
+          "branch": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Branch",
+            "default": "main",
+            "example": "main"
+          }
+        },
+        "type": "object",
+        "title": "AnalysisTriggerRequest"
+      },
+      "ApprovalResponse": {
+        "properties": {
+          "plan_id": {
+            "type": "string",
+            "title": "Plan Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "default": "approved"
+          },
+          "approved_by": {
+            "type": "string",
+            "title": "Approved By"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "default": "Test plan approved for execution"
+          }
+        },
+        "type": "object",
+        "required": [
+          "plan_id",
+          "approved_by"
+        ],
+        "title": "ApprovalResponse"
+      },
+      "AuditEventRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "example": "aud_101"
+          },
+          "user_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Id"
+          },
+          "action": {
+            "type": "string",
+            "title": "Action",
+            "example": "plan.approve"
+          },
+          "target_type": {
+            "type": "string",
+            "title": "Target Type",
+            "example": "test_plan"
+          },
+          "target_id": {
+            "type": "string",
+            "title": "Target Id",
+            "example": "plan_1042"
+          },
+          "payload": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payload"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At",
+            "default": "2026-10-21T08:30:00Z"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "action",
+          "target_type",
+          "target_id"
+        ],
+        "title": "AuditEventRead"
+      },
+      "BranchSummary": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "example": "main"
+          },
+          "commit_sha": {
+            "type": "string",
+            "title": "Commit Sha",
+            "example": "7960a5e8"
+          },
+          "is_default": {
+            "type": "boolean",
+            "title": "Is Default",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "commit_sha"
+        ],
+        "title": "BranchSummary"
+      },
+      "Citation": {
+        "properties": {
+          "file_path": {
+            "type": "string",
+            "title": "File Path"
+          },
+          "line_start": {
+            "type": "integer",
+            "title": "Line Start"
+          },
+          "line_end": {
+            "type": "integer",
+            "title": "Line End"
+          },
+          "snippet": {
+            "type": "string",
+            "title": "Snippet"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file_path",
+          "line_start",
+          "line_end",
+          "snippet"
+        ],
+        "title": "Citation"
+      },
+      "DataResponse_AnalysisJobRead_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/AnalysisJobRead"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "DataResponse[AnalysisJobRead]"
+      },
+      "DataResponse_ApprovalResponse_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ApprovalResponse"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "DataResponse[ApprovalResponse]"
+      },
+      "DataResponse_HealthStatus_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/HealthStatus"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "DataResponse[HealthStatus]"
+      },
+      "DataResponse_JobCancelResponse_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/JobCancelResponse"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "DataResponse[JobCancelResponse]"
+      },
+      "DataResponse_OrganizationRead_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/OrganizationRead"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "DataResponse[OrganizationRead]"
+      },
+      "DataResponse_QualityReportSummary_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/QualityReportSummary"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "DataResponse[QualityReportSummary]"
+      },
+      "DataResponse_ReadinessStatus_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ReadinessStatus"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "DataResponse[ReadinessStatus]"
+      },
+      "DataResponse_RepositoryRead_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/RepositoryRead"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "DataResponse[RepositoryRead]"
+      },
+      "DataResponse_RepositoryRiskSummary_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/RepositoryRiskSummary"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "DataResponse[RepositoryRiskSummary]"
+      },
+      "DataResponse_RepositorySyncResponse_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/RepositorySyncResponse"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "DataResponse[RepositorySyncResponse]"
+      },
+      "DataResponse_TestPlanRead_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/TestPlanRead"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "DataResponse[TestPlanRead]"
+      },
+      "DataResponse_TestRunRead_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/TestRunRead"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "DataResponse[TestRunRead]"
+      },
+      "DataResponse_TriageResponse_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/TriageResponse"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "DataResponse[TriageResponse]"
+      },
+      "DataResponse_UserProfile_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/UserProfile"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "DataResponse[UserProfile]"
+      },
+      "DataResponse_WebhookReceiptResponse_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/WebhookReceiptResponse"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "DataResponse[WebhookReceiptResponse]"
+      },
+      "DataResponse_WhiteboxCoverageSummary_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/WhiteboxCoverageSummary"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "DataResponse[WhiteboxCoverageSummary]"
+      },
+      "DataResponse_dict_str__Any__": {
+        "properties": {
+          "data": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Data"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "DataResponse[dict[str, Any]]"
+      },
+      "DataResponse_list_BranchSummary__": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/BranchSummary"
+            },
+            "type": "array",
+            "title": "Data"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "DataResponse[list[BranchSummary]]"
+      },
+      "DataResponse_list_GitHubInstallationSummary__": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/GitHubInstallationSummary"
+            },
+            "type": "array",
+            "title": "Data"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "DataResponse[list[GitHubInstallationSummary]]"
+      },
+      "GitHubInstallationSummary": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "installation_id": {
+            "type": "integer",
+            "title": "Installation Id"
+          },
+          "account_login": {
+            "type": "string",
+            "title": "Account Login"
+          },
+          "target_type": {
+            "type": "string",
+            "title": "Target Type"
+          },
+          "repository_selection": {
+            "type": "string",
+            "title": "Repository Selection"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "installation_id",
+          "account_login",
+          "target_type",
+          "repository_selection"
+        ],
+        "title": "GitHubInstallationSummary"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "HealthStatus": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "default": "ok",
+            "example": "ok"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version",
+            "default": "0.1.0",
+            "example": "0.1.0"
+          },
+          "environment": {
+            "type": "string",
+            "title": "Environment",
+            "default": "development",
+            "example": "development"
+          }
+        },
+        "type": "object",
+        "title": "HealthStatus"
+      },
+      "JobCancelResponse": {
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "title": "Job Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "default": "cancelled"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "default": "Execution job cancelled successfully"
+          }
+        },
+        "type": "object",
+        "required": [
+          "job_id"
+        ],
+        "title": "JobCancelResponse"
+      },
+      "ObjectiveKindSummary": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "title": "Kind",
+            "example": "statement"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total",
+            "default": 0
+          },
+          "covered": {
+            "type": "integer",
+            "title": "Covered",
+            "default": 0
+          },
+          "uncovered": {
+            "type": "integer",
+            "title": "Uncovered",
+            "default": 0
+          },
+          "infeasible": {
+            "type": "integer",
+            "title": "Infeasible",
+            "default": 0
+          },
+          "unknown": {
+            "type": "integer",
+            "title": "Unknown",
+            "default": 0
+          },
+          "unsupported": {
+            "type": "integer",
+            "title": "Unsupported",
+            "default": 0
+          },
+          "coverage_pct": {
+            "type": "number",
+            "title": "Coverage Pct",
+            "default": 0.0
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind"
+        ],
+        "title": "ObjectiveKindSummary"
+      },
+      "OrganizationCreate": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 2,
+            "title": "Name",
+            "example": "Acme Engineering"
+          },
+          "slug": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 2,
+            "title": "Slug",
+            "example": "acme-engineering"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "slug"
+        ],
+        "title": "OrganizationCreate"
+      },
+      "OrganizationRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "example": "org_1234567890"
+          },
+          "slug": {
+            "type": "string",
+            "title": "Slug",
+            "example": "acme-engineering"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "example": "Acme Engineering"
+          },
+          "billing_tier": {
+            "type": "string",
+            "title": "Billing Tier",
+            "default": "team",
+            "example": "team"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "slug",
+          "name",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "OrganizationRead"
+      },
+      "OrganizationSummary": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "example": "org_default123"
+          },
+          "slug": {
+            "type": "string",
+            "title": "Slug",
+            "example": "acme-corp"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "example": "Acme Corporation"
+          },
+          "role": {
+            "type": "string",
+            "title": "Role",
+            "example": "owner"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "slug",
+          "name",
+          "role"
+        ],
+        "title": "OrganizationSummary"
+      },
+      "PaginatedResponse_AuditEventRead_": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/AuditEventRead"
+            },
+            "type": "array",
+            "title": "Data"
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/PaginationMetadata"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data",
+          "pagination"
+        ],
+        "title": "PaginatedResponse[AuditEventRead]"
+      },
+      "PaginatedResponse_OrganizationRead_": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/OrganizationRead"
+            },
+            "type": "array",
+            "title": "Data"
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/PaginationMetadata"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data",
+          "pagination"
+        ],
+        "title": "PaginatedResponse[OrganizationRead]"
+      },
+      "PaginatedResponse_RepositoryRead_": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/RepositoryRead"
+            },
+            "type": "array",
+            "title": "Data"
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/PaginationMetadata"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data",
+          "pagination"
+        ],
+        "title": "PaginatedResponse[RepositoryRead]"
+      },
+      "PaginatedResponse_TestPlanRead_": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/TestPlanRead"
+            },
+            "type": "array",
+            "title": "Data"
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/PaginationMetadata"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data",
+          "pagination"
+        ],
+        "title": "PaginatedResponse[TestPlanRead]"
+      },
+      "PaginatedResponse_TestRunRead_": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/TestRunRead"
+            },
+            "type": "array",
+            "title": "Data"
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/PaginationMetadata"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data",
+          "pagination"
+        ],
+        "title": "PaginatedResponse[TestRunRead]"
+      },
+      "PaginatedResponse_WhiteboxObjective_": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/WhiteboxObjective"
+            },
+            "type": "array",
+            "title": "Data"
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/PaginationMetadata"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data",
+          "pagination"
+        ],
+        "title": "PaginatedResponse[WhiteboxObjective]"
+      },
+      "PaginationMetadata": {
+        "properties": {
+          "page": {
+            "type": "integer",
+            "title": "Page"
+          },
+          "page_size": {
+            "type": "integer",
+            "title": "Page Size"
+          },
+          "total_items": {
+            "type": "integer",
+            "title": "Total Items"
+          },
+          "total_pages": {
+            "type": "integer",
+            "title": "Total Pages"
+          },
+          "has_next": {
+            "type": "boolean",
+            "title": "Has Next"
+          },
+          "has_prev": {
+            "type": "boolean",
+            "title": "Has Prev"
+          }
+        },
+        "type": "object",
+        "required": [
+          "page",
+          "page_size",
+          "total_items",
+          "total_pages",
+          "has_next",
+          "has_prev"
+        ],
+        "title": "PaginationMetadata"
+      },
+      "QualityMetricPoint": {
+        "properties": {
+          "timestamp": {
+            "type": "string",
+            "title": "Timestamp"
+          },
+          "pass_rate": {
+            "type": "number",
+            "title": "Pass Rate"
+          },
+          "coverage_pct": {
+            "type": "number",
+            "title": "Coverage Pct"
+          },
+          "total_runs": {
+            "type": "integer",
+            "title": "Total Runs"
+          },
+          "duration_avg_ms": {
+            "type": "integer",
+            "title": "Duration Avg Ms"
+          }
+        },
+        "type": "object",
+        "required": [
+          "timestamp",
+          "pass_rate",
+          "coverage_pct",
+          "total_runs",
+          "duration_avg_ms"
+        ],
+        "title": "QualityMetricPoint"
+      },
+      "QualityReportSummary": {
+        "properties": {
+          "total_runs_evaluated": {
+            "type": "integer",
+            "title": "Total Runs Evaluated"
+          },
+          "overall_pass_rate": {
+            "type": "number",
+            "title": "Overall Pass Rate"
+          },
+          "average_coverage": {
+            "type": "number",
+            "title": "Average Coverage"
+          },
+          "trend_history": {
+            "items": {
+              "$ref": "#/components/schemas/QualityMetricPoint"
+            },
+            "type": "array",
+            "title": "Trend History"
+          }
+        },
+        "type": "object",
+        "required": [
+          "total_runs_evaluated",
+          "overall_pass_rate",
+          "average_coverage"
+        ],
+        "title": "QualityReportSummary"
+      },
+      "ReadinessStatus": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "default": "ready",
+            "example": "ready"
+          },
+          "database": {
+            "type": "string",
+            "title": "Database",
+            "default": "connected",
+            "example": "connected"
+          },
+          "redis": {
+            "type": "string",
+            "title": "Redis",
+            "default": "connected",
+            "example": "connected"
+          },
+          "rabbitmq": {
+            "type": "string",
+            "title": "Rabbitmq",
+            "default": "connected",
+            "example": "connected"
+          }
+        },
+        "type": "object",
+        "title": "ReadinessStatus"
+      },
+      "RepositoryRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "example": "repo_nextjs_dashboard"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "example": "nextjs-dashboard"
+          },
+          "full_name": {
+            "type": "string",
+            "title": "Full Name",
+            "example": "acme/nextjs-dashboard"
+          },
+          "default_branch": {
+            "type": "string",
+            "title": "Default Branch",
+            "default": "main",
+            "example": "main"
+          },
+          "is_private": {
+            "type": "boolean",
+            "title": "Is Private",
+            "default": false
+          },
+          "clone_url": {
+            "type": "string",
+            "title": "Clone Url",
+            "example": "https://github.com/acme/nextjs-dashboard.git"
+          },
+          "language": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Language",
+            "default": "TypeScript",
+            "example": "TypeScript"
+          },
+          "last_synced_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Synced At",
+            "example": "2026-10-21T09:30:00Z"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "full_name",
+          "clone_url",
+          "created_at"
+        ],
+        "title": "RepositoryRead"
+      },
+      "RepositoryRiskSummary": {
+        "properties": {
+          "repository_id": {
+            "type": "string",
+            "title": "Repository Id"
+          },
+          "overall_score": {
+            "type": "integer",
+            "title": "Overall Score",
+            "default": 68
+          },
+          "risk_tier": {
+            "type": "string",
+            "title": "Risk Tier",
+            "default": "medium"
+          },
+          "evaluated_commit": {
+            "type": "string",
+            "title": "Evaluated Commit",
+            "default": "7960a5e8"
+          },
+          "files": {
+            "items": {
+              "$ref": "#/components/schemas/RiskyFileAssessment"
+            },
+            "type": "array",
+            "title": "Files"
+          }
+        },
+        "type": "object",
+        "required": [
+          "repository_id"
+        ],
+        "title": "RepositoryRiskSummary"
+      },
+      "RepositorySyncResponse": {
+        "properties": {
+          "repository_id": {
+            "type": "string",
+            "title": "Repository Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "default": "queued"
+          },
+          "job_id": {
+            "type": "string",
+            "title": "Job Id"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "default": "Repository sync dispatched"
+          }
+        },
+        "type": "object",
+        "required": [
+          "repository_id",
+          "job_id"
+        ],
+        "title": "RepositorySyncResponse"
+      },
+      "ResponseMeta": {
+        "properties": {
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Id",
+            "description": "Unique correlation ID for request"
+          },
+          "timestamp": {
+            "type": "string",
+            "title": "Timestamp",
+            "description": "ISO 8601 UTC timestamp of response generation"
+          }
+        },
+        "type": "object",
+        "title": "ResponseMeta"
+      },
+      "RiskFactor": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "example": "Churn & Blast Radius"
+          },
+          "impact": {
+            "type": "string",
+            "title": "Impact",
+            "example": "high"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "example": "Modified core authentication handler imported by 14 files"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "impact",
+          "description"
+        ],
+        "title": "RiskFactor"
+      },
+      "RiskyFileAssessment": {
+        "properties": {
+          "file_path": {
+            "type": "string",
+            "title": "File Path",
+            "example": "src/auth/session.ts"
+          },
+          "risk_score": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Risk Score",
+            "example": 87
+          },
+          "severity": {
+            "type": "string",
+            "title": "Severity",
+            "example": "critical"
+          },
+          "confidence": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidence",
+            "example": 0.94
+          },
+          "factors": {
+            "items": {
+              "$ref": "#/components/schemas/RiskFactor"
+            },
+            "type": "array",
+            "title": "Factors"
+          },
+          "has_missing_data": {
+            "type": "boolean",
+            "title": "Has Missing Data",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "file_path",
+          "risk_score",
+          "severity",
+          "confidence"
+        ],
+        "title": "RiskyFileAssessment"
+      },
+      "TestPlanRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "example": "plan_1042"
+          },
+          "repository_id": {
+            "type": "string",
+            "title": "Repository Id",
+            "example": "repo_nextjs_dashboard"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title",
+            "example": "PR #42 Coverage & Regression Plan"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "default": "draft",
+            "example": "draft"
+          },
+          "target_branch": {
+            "type": "string",
+            "title": "Target Branch",
+            "default": "main"
+          },
+          "proposed_tests_count": {
+            "type": "integer",
+            "title": "Proposed Tests Count",
+            "default": 8
+          },
+          "impacted_tests_count": {
+            "type": "integer",
+            "title": "Impacted Tests Count",
+            "default": 4
+          },
+          "approved_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved By"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At",
+            "default": "2026-10-21T08:00:00Z"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "repository_id",
+          "title"
+        ],
+        "title": "TestPlanRead"
+      },
+      "TestRunRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "example": "run_1042"
+          },
+          "repository_id": {
+            "type": "string",
+            "title": "Repository Id",
+            "example": "repo_nextjs_dashboard"
+          },
+          "plan_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plan Id",
+            "example": "plan_1042"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "default": "completed",
+            "example": "completed"
+          },
+          "commit_sha": {
+            "type": "string",
+            "title": "Commit Sha",
+            "default": "7960a5e8"
+          },
+          "branch": {
+            "type": "string",
+            "title": "Branch",
+            "default": "main"
+          },
+          "duration_ms": {
+            "type": "integer",
+            "title": "Duration Ms",
+            "default": 4320
+          },
+          "passed_count": {
+            "type": "integer",
+            "title": "Passed Count",
+            "default": 28
+          },
+          "failed_count": {
+            "type": "integer",
+            "title": "Failed Count",
+            "default": 1
+          },
+          "flaky_count": {
+            "type": "integer",
+            "title": "Flaky Count",
+            "default": 0
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At",
+            "default": "2026-10-21T08:15:00Z"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "repository_id"
+        ],
+        "title": "TestRunRead"
+      },
+      "TriageRequest": {
+        "properties": {
+          "run_id": {
+            "type": "string",
+            "title": "Run Id"
+          },
+          "failed_test_name": {
+            "type": "string",
+            "title": "Failed Test Name"
+          },
+          "stack_trace": {
+            "type": "string",
+            "title": "Stack Trace"
+          }
+        },
+        "type": "object",
+        "required": [
+          "run_id",
+          "failed_test_name",
+          "stack_trace"
+        ],
+        "title": "TriageRequest"
+      },
+      "TriageResponse": {
+        "properties": {
+          "hypothesis": {
+            "type": "string",
+            "title": "Hypothesis"
+          },
+          "is_confirmed_fact": {
+            "type": "boolean",
+            "title": "Is Confirmed Fact",
+            "default": false
+          },
+          "root_cause_summary": {
+            "type": "string",
+            "title": "Root Cause Summary"
+          },
+          "confidence_score": {
+            "type": "number",
+            "title": "Confidence Score",
+            "default": 0.88
+          },
+          "citations": {
+            "items": {
+              "$ref": "#/components/schemas/Citation"
+            },
+            "type": "array",
+            "title": "Citations"
+          },
+          "suggested_patch_diff": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Suggested Patch Diff"
+          },
+          "requires_human_approval": {
+            "type": "boolean",
+            "title": "Requires Human Approval",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "hypothesis",
+          "root_cause_summary"
+        ],
+        "title": "TriageResponse"
+      },
+      "UserProfile": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "example": "usr_1234567890"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email",
+            "example": "developer@atip.local"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "example": "Lead Engineer"
+          },
+          "avatar_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatar Url",
+            "example": "https://avatars.githubusercontent.com/u/1?v=4"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active",
+            "default": true
+          },
+          "organizations": {
+            "items": {
+              "$ref": "#/components/schemas/OrganizationSummary"
+            },
+            "type": "array",
+            "title": "Organizations"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "email",
+          "name"
+        ],
+        "title": "UserProfile"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "WebhookReceiptResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "default": "received"
+          },
+          "event": {
+            "type": "string",
+            "title": "Event"
+          },
+          "delivery_id": {
+            "type": "string",
+            "title": "Delivery Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "event",
+          "delivery_id"
+        ],
+        "title": "WebhookReceiptResponse"
+      },
+      "WhiteboxCoverageSummary": {
+        "properties": {
+          "analysis_id": {
+            "type": "string",
+            "title": "Analysis Id"
+          },
+          "repository_id": {
+            "type": "string",
+            "title": "Repository Id"
+          },
+          "commit_sha": {
+            "type": "string",
+            "title": "Commit Sha"
+          },
+          "techniques": {
+            "items": {
+              "$ref": "#/components/schemas/ObjectiveKindSummary"
+            },
+            "type": "array",
+            "title": "Techniques"
+          },
+          "overall_mutation_score": {
+            "type": "number",
+            "title": "Overall Mutation Score",
+            "default": 0.0
+          },
+          "mcdc_paired_count": {
+            "type": "integer",
+            "title": "Mcdc Paired Count",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "analysis_id",
+          "repository_id",
+          "commit_sha"
+        ],
+        "title": "WhiteboxCoverageSummary"
+      },
+      "WhiteboxObjective": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "example": "obj_stmt_001"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind",
+            "example": "mcdc"
+          },
+          "file_path": {
+            "type": "string",
+            "title": "File Path",
+            "example": "src/auth/session.ts"
+          },
+          "line_start": {
+            "type": "integer",
+            "title": "Line Start",
+            "example": 42
+          },
+          "line_end": {
+            "type": "integer",
+            "title": "Line End",
+            "example": 45
+          },
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "example": "Decision: (is_admin || (has_permission && !is_revoked))"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "example": "covered"
+          },
+          "evidence": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "file_path",
+          "line_start",
+          "line_end",
+          "description",
+          "status"
+        ],
+        "title": "WhiteboxObjective"
+      }
+    }
+  }
+}

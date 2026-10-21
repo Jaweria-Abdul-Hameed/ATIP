@@ -1,0 +1,4 @@
+# Reference infra docker-compose.
+# Primary compose file is at project root ./docker-compose.yml
+include:
+  - path: ../docker-compose.yml

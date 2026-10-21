@@ -12,6 +12,7 @@ out/
 build/
 dist/
 *.egg-info/
+*.tsbuildinfo
 
 # Python cache & tooling
 __pycache__/

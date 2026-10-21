@@ -33,12 +33,12 @@
 
 ## M1 — backend and local foundation
 
-- [ ] **M1-01** Scaffold FastAPI modular monolith, OpenAPI schemas, Python uv lock, lint/type/test.
-- [ ] **M1-02** Add Docker Compose PostgreSQL, Redis, RabbitMQ, MinIO-compatible store, health checks, .env.example.
-- [ ] **M1-03** Implement Alembic migrations and core organizations/users/memberships/repository/job entities.
-- [ ] **M1-04** Create versioned REST API envelopes, pagination, request IDs, validation, structured errors and SSE contract.
-- [ ] **M1-05** Add typed frontend API client and switch first Overview/Repositories views from demo fixtures to backend-backed empty states.
-- [ ] **M1-06** Add CI checks, API unit/integration tests, Compose smoke test and reproducible dev commands.
+- [x] **M1-01** Scaffold FastAPI modular monolith, OpenAPI schemas, Python uv lock, lint/type/test.
+- [x] **M1-02** Add Docker Compose PostgreSQL, Redis, RabbitMQ, MinIO-compatible store, health checks, .env.example.
+- [x] **M1-03** Implement Alembic migrations and core organizations/users/memberships/repository/job entities.
+- [x] **M1-04** Create versioned REST API envelopes, pagination, request IDs, validation, structured errors and SSE contract.
+- [x] **M1-05** Add typed frontend API client and switch first Overview/Repositories views from demo fixtures to backend-backed empty states.
+- [x] **M1-06** Add CI checks, API unit/integration tests, Compose smoke test and reproducible dev commands.
 
 **Exit gate:** all checkboxes in this phase are verified; tests/build and security review pass; relevant UI works; status/commit updated.
 

@@ -7,7 +7,19 @@
     "build:web": "pnpm --filter @atip/web build",
     "lint:web": "pnpm --filter @atip/web lint",
     "typecheck:web": "pnpm --filter @atip/web typecheck",
-    "test:web": "pnpm --filter @atip/web test"
+    "test:web": "pnpm --filter @atip/web test",
+    "dev:api": "uv run --project services/api uvicorn atip_api.main:app --reload --host 0.0.0.0 --port 8000",
+    "test:api": "uv run --project services/api pytest services/api/tests -v",
+    "lint:api": "uv run --project services/api ruff check services/api/src services/api/tests",
+    "format:api": "uv run --project services/api ruff format services/api/src services/api/tests",
+    "migrate:api": "uv run --project services/api alembic --config services/api/alembic.ini upgrade head",
+    "openapi:export": "uv run --project services/api python services/api/export_openapi.py",
+    "compose:up": "docker compose up -d",
+    "compose:down": "docker compose down",
+    "compose:ps": "docker compose ps",
+    "compose:smoke": "uv run --project services/api python scripts/compose_smoke_test.py",
+    "test": "pnpm typecheck:web && pnpm test:api",
+    "lint": "pnpm lint:web && pnpm lint:api"
   },
   "devDependencies": {
     "puppeteer-core": "^25.14.0",

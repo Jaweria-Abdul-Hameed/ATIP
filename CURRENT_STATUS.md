@@ -1,9 +1,9 @@
 # ATIP — persistent agent checkpoint
 
-**State:** SETUP and M0 UI-FIRST COMPLETED AND VERIFIED.
-**Next action:** Phase M1 — backend and local foundation (M1-01: Scaffold FastAPI modular monolith, OpenAPI schemas, Python uv lock, lint/type/test).
-**Active phase:** Phase M0 completed; waiting at phase boundary for next Antigravity session to execute M1.
-**Last verified commit:** 7960a5e (pushed to origin/main).
+**State:** SETUP, M0, and M1 BACKEND AND LOCAL FOUNDATION COMPLETED AND VERIFIED.
+**Next action:** Phase M2 — identity, organizations and GitHub (M2-01: Implement OIDC login/session/logout/callback, protected routes and session expiry).
+**Active phase:** Phase M1 completed; waiting at phase boundary for next Antigravity session to execute M2.
+**Last verified commit:** Pending commit of verified M1 implementation.
 **Current blockers:** None. No human intervention required.
 
 ## Progress log (append verified work only)
@@ -22,68 +22,25 @@
 | 2026-10-21 07:05 | M0-THEME | Smooth spin & scale animation for ThemeToggle | Implemented lightweight, hardware-accelerated CSS rotation (`90deg`) and scale transitions between Sun and Moon in `theme-toggle.tsx`. Zero layout shift or external dependencies. Captured `18_Theme_Toggled_Dark.png` and `19_Theme_Toggled_Light.png`. | 5628487 |
 | 2026-10-21 07:35 | M0-NUMBERS | Align metric & stat number typography to Source Serif 4 | Updated `StatCard`, risk scores, coverage metrics, and report panels to use `Source Serif 4` font with tight optical tracking (`-0.035em`). Recompiled Next.js build. Re-captured all 28 desktop & mobile screenshots in light/dark mode under `artifacts/ui/`. | 041f8b1 |
 | 2026-10-21 07:55 | M0-NAV | Deep-link navigation from profile dropdowns to settings tabs | Connected Topbar and Sidebar Profile dropdowns to `/app/settings?tab=profile`, `/app/settings?tab=members`, and `/app/settings?tab=execution`. Added `useSearchParams()` deep-linking with `<Suspense>` boundary in `SettingsPage`. Verified Next.js production build (`16/16` static pages). | ab38141 |
-| 2026-10-21 08:05 | M0-REPORTS-GRAPH | Interactive quality trend graph on Reports & tactile spring theme animation | Implemented full interactive SVG curve + bar chart with multi-metric toggles (Pass Rate, Coverage, Runs, Duration), repository filtering, tooltips, and real client-side CSV/JSON file exports. Replaced theme toggle with 360-degree spring spin animation (`cubic-bezier(0.34, 1.56, 0.64, 1)`) and exact Sun (light) / Moon (dark) icon matching. Recompiled Next.js build. Re-captured all 28 screenshots under `artifacts/ui/`. | verified |
+| 2026-10-21 08:05 | M0-REPORTS-GRAPH | Interactive quality trend graph on Reports & tactile spring theme animation | Implemented full interactive SVG curve + bar chart with multi-metric toggles (Pass Rate, Coverage, Runs, Duration), repository filtering, tooltips, and real client-side CSV/JSON file exports. Replaced theme toggle with 360-degree spring spin animation (`cubic-bezier(0.34, 1.56, 0.64, 1)`) and exact Sun (light) / Moon (dark) icon matching. Recompiled Next.js build. Re-captured all 28 screenshots under `artifacts/ui/`. | 7960a5e |
+| 2026-10-21 09:35 | M1-01 | FastAPI modular monolith scaffolding | `services/api/src/atip_api/`, `export_openapi.py`, `pyproject.toml`, `uv.lock`. `uv run ruff check` (0 errors), `uv run pytest services/api/tests` (20/20 passed), OpenAPI export generated 28 API routes. Exit code 0 | verified |
+| 2026-10-21 09:44 | M1-02 | Docker Compose backing services stack | `docker-compose.yml`, `infra/docker-compose.yml`, `.env.example`. PostgreSQL 16, Redis 7, RabbitMQ 3.13, MinIO (Chainguard S3). `docker compose ps` -> all 4 services `Up (healthy)`. Exit code 0 | verified |
+| 2026-10-21 09:47 | M1-03 | Alembic async migrations & core entities | `services/api/alembic/`, `0001_initial_core_entities.py`. Applied migration to live PostgreSQL container: `alembic upgrade head`. Verified 10 tables in `atip_db` via `psql -c "\dt"`. Exit code 0 | verified |
+| 2026-10-21 09:49 | M1-04 | API envelopes, pagination, request IDs, SSE | `DataResponse`, `PaginatedResponse`, `ResponseMeta`, `RequestIDMiddleware`, `TimingMiddleware`, `SecurityHeadersMiddleware`, `validation_exception_handler`, `sse_event_stream`. Verified in `tests/test_envelopes.py`, `test_sse.py`, `test_pagination.py`. Exit code 0 | verified |
+| 2026-10-21 09:51 | M1-05 | Typed frontend API client & backend-backed empty states | `apps/web/src/lib/api-client.ts`, `apps/web/src/lib/api-adapter.ts`, `/app` Overview & `/app/repositories` pages updated with live backend empty states + demo toggle. `pnpm typecheck:web` (0 errors), `pnpm lint:web` (0 errors), `pnpm build:web` (16/16 pages static compiled). Exit code 0 | verified |
+| 2026-10-21 09:54 | M1-06 | CI workflows, smoke tests & dev commands | `.github/workflows/ci.yml`, `scripts/compose_smoke_test.py`, root `package.json` dev scripts. `pnpm compose:smoke` verified live Postgres, Redis, RabbitMQ, MinIO. `pnpm test` (typecheck + 20 pytest passed), `pnpm lint` (next lint + ruff passed). Exit code 0 | verified |
 
-## UI preview handoff
-- URL: `http://localhost:3000/app` (running)
-- Pages actually inspected:
-  - `/app` (Overview dashboard)
-  - `/app/repositories` (Repository list, search, tabs)
-  - `/app/repositories/nextjs-dashboard` (Repository workspace, commits timeline, dependency map)
-  - `/app/risk` (Risk intelligence, severity badges, risk factors, export, evidence drawer)
-  - `/app/coverage` (White-box coverage matrix with 11 techniques, MC/DC pair evidence, mutation score)
-  - `/app/test-plans` (Test plans, multi-selection, review/approval modal)
-  - `/app/runs` (Test runs list, statuses, durations, live details panel)
-  - `/app/runs/run-1042` (Execution stepper, stdout/stderr logs, artifacts, sandbox isolation controls)
-  - `/app/analysis` (AI failure triage split-pane, citations, grounded hypothesis flag)
-  - `/app/reports` (Reports, test reliability trend chart, CSV/JSON export)
-  - `/app/settings` (All 9 settings tabs, appearance theme toggle, masked secrets)
-  - `/sign-in` (OIDC SSO view, demo workspace access)
-- Desktop/mobile and light/dark checks:
-  - Verified in Light mode (`#fafaf8` canvas, `#ffffff` surfaces, dark sidebar, refined typography).
-  - Verified in Dark mode (`#101010` canvas, `#181818` surfaces, consistent dark borders, zero color glare).
-  - Verified in Mobile viewport (390x844 with hamburger menu, responsive 2-column cards, zero horizontal scroll).
-- Screenshot evidence:
-  - `artifacts/ui/01_Overview_light.png`
-  - `artifacts/ui/01_Overview_dark.png`
-  - `artifacts/ui/01_Overview_mobile.png`
-  - `artifacts/ui/02_Repositories_light.png`
-  - `artifacts/ui/02_Repositories_dark.png`
-  - `artifacts/ui/03_Repository_Workspace_light.png`
-  - `artifacts/ui/03_Repository_Workspace_dark.png`
-  - `artifacts/ui/04_Risk_Intelligence_light.png`
-  - `artifacts/ui/04_Risk_Intelligence_dark.png`
-  - `artifacts/ui/05_Test_Plans_light.png`
-  - `artifacts/ui/05_Test_Plans_dark.png`
-  - `artifacts/ui/06_Test_Runs_light.png`
-  - `artifacts/ui/06_Test_Runs_dark.png`
-  - `artifacts/ui/07_Run_Details_light.png`
-  - `artifacts/ui/07_Run_Details_dark.png`
-  - `artifacts/ui/08_WhiteBox_Coverage_light.png`
-  - `artifacts/ui/08_WhiteBox_Coverage_dark.png`
-  - `artifacts/ui/08_WhiteBox_Coverage_mobile.png`
-  - `artifacts/ui/09_AI_Analysis_light.png`
-  - `artifacts/ui/09_AI_Analysis_dark.png`
-  - `artifacts/ui/10_Reports_light.png`
-  - `artifacts/ui/10_Reports_dark.png`
-  - `artifacts/ui/11_Settings_light.png`
-  - `artifacts/ui/11_Settings_dark.png`
-  - `artifacts/ui/12_Sign_In_light.png`
-  - `artifacts/ui/12_Sign_In_dark.png`
-  - `artifacts/ui/13_Sign_Up_light.png`
-  - `artifacts/ui/13_Sign_Up_dark.png`
-  - `artifacts/ui/14_Forgot_Password_light.png`
-  - `artifacts/ui/14_Forgot_Password_dark.png`
-  - `artifacts/ui/15_Notifications_Popover.png`
-  - `artifacts/ui/16_Topbar_Profile_Popover.png`
-  - `artifacts/ui/17_Sidebar_Profile_Popover.png`
-  - `artifacts/ui/18_Theme_Toggled_Dark.png`
-  - `artifacts/ui/19_Theme_Toggled_Light.png`
-- Known UI defects: None. All routes, navigation links, modals, tabs, theme toggles, and filters function cleanly.
+## Service status summary
+- PostgreSQL: `localhost:5432` (`atip_db`) — healthy, migrated to revision `3fc2ba9b7847`.
+- Redis: `localhost:6379/0` — healthy, ping operational.
+- RabbitMQ: `localhost:5672` (AMQP) & `localhost:15672` (Management) — healthy, robust connection verified.
+- MinIO: `localhost:9000` (S3) & `localhost:9001` (Console) — healthy, bucket `atip-artifacts` created and ready.
+- FastAPI: `services/api` modular monolith ready to serve on `localhost:8000`.
 
 ## External setup needed (only if encountered)
-No external setup blockers. Environment is fully configured for local development.
+No external setup blockers. Local containerized infrastructure and Python/Next.js toolchains are completely operational.
 
 ## Next agent handoff
 Read `AGENTS.md`, then this file, then `TASKLIST.md`.
-The active phase boundary is reached for M0. Next phase to begin in the new conversation is **M1 — backend and local foundation**, starting with task **M1-01** (FastAPI modular monolith scaffolding).
+The active phase boundary is reached for M1. All checkboxes for M1 are verified and checked.
+The next phase to begin in the new conversation is **M2 — identity, organizations and GitHub**, starting with task **M2-01** (Implement OIDC login/session/logout/callback, protected routes and session expiry).
