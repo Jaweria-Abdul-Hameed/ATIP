@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { Moon, Sun } from "lucide-react";
 
 export function ThemeToggle({ className }: { className?: string }) {
-  const { theme, setTheme, resolvedTheme } = useTheme();
+  const { setTheme, resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -21,7 +21,9 @@ export function ThemeToggle({ className }: { className?: string }) {
           "px-2.5 py-1.5 rounded-lg border border-border bg-surface text-text text-xs font-medium inline-flex items-center gap-1.5"
         }
       >
-        <span className="text-muted text-sm">◐</span>
+        <div className="w-3.5 h-3.5 flex items-center justify-center text-muted text-xs">
+          ◐
+        </div>
         <span>Theme</span>
       </button>
     );
@@ -35,15 +37,27 @@ export function ThemeToggle({ className }: { className?: string }) {
       aria-label="Toggle light or dark theme"
       className={
         className ||
-        "px-2.5 py-1.5 rounded-lg border border-border bg-surface text-text hover:bg-soft transition-colors text-xs font-medium inline-flex items-center gap-1.5 cursor-pointer shadow-sm"
+        "px-2.5 py-1.5 rounded-lg border border-border bg-surface text-text hover:bg-soft transition-colors text-xs font-medium inline-flex items-center gap-1.5 cursor-pointer shadow-sm group select-none"
       }
       title={isDark ? "Switch to light mode" : "Switch to dark mode"}
     >
-      {isDark ? (
-        <Sun className="w-3.5 h-3.5 text-amber-400" />
-      ) : (
-        <Moon className="w-3.5 h-3.5 text-muted" />
-      )}
+      {/* Smooth spinning container transitioning between Sun and Moon */}
+      <div className="relative w-3.5 h-3.5 flex items-center justify-center shrink-0 overflow-hidden">
+        <Sun
+          className={`w-3.5 h-3.5 text-amber-400 absolute transition-all duration-300 ease-out transform ${
+            isDark
+              ? "rotate-0 scale-100 opacity-100"
+              : "-rotate-90 scale-0 opacity-0"
+          }`}
+        />
+        <Moon
+          className={`w-3.5 h-3.5 text-muted absolute transition-all duration-300 ease-out transform ${
+            isDark
+              ? "rotate-90 scale-0 opacity-0"
+              : "rotate-0 scale-100 opacity-100"
+          }`}
+        />
+      </div>
       <span>Theme</span>
     </button>
   );

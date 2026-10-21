@@ -18,7 +18,8 @@
 | 2026-10-19 11:20 | M0-09, M0-WB-03 | Visual inspection and automated browser screenshot capture | Automated Headless Chrome runner via `scripts/capture_screenshots.mjs`. 12 Light Mode screenshots, 12 Dark Mode screenshots, 2 Mobile Responsive screenshots captured under `artifacts/ui/`. Inspected against approved PNGs. Visual parity verified. Exit code 0 | verified |
 | 2026-10-19 17:23 | M0-TYPO | Typography refinement: Source Serif 4 headlines & Figtree body | Bundled self-contained WOFF2 webfonts (`SourceSerif4-Regular.woff2`, `Figtree-Regular.woff2`) in `apps/web/public/fonts/`. Configured `@font-face` rules and strict `-0.035em` kerning. Recompiled Next.js production build (`pnpm --filter @atip/web build` -> 14/14 static pages). Re-captured 28 screenshots under `artifacts/ui/`. Verified high-contrast serif headlines matching user mockup. | 2c6d0fd |
 | 2026-10-19 17:50 | M0-AUTH | Dedicated Sign-In, Sign-Up, and Forgot Password views | Built separate `/sign-in` (GitHub, Google, Email, SSO, Quick pass), `/sign-up` (GitHub, Google, Org, Terms, Quick pass), and `/forgot-password` (Reset email flow, workspace link). Lockout-prevention guaranteed. Compiled Next.js build (`16/16` static pages). Captured 32 screenshots in light & dark mode. | aaede30 |
-| 2026-10-21 06:50 | M0-POPOVERS | Interactive Notifications Popover & Profile Menus (topbar & sidebar) | Implemented `NotificationsPopover` with unread count, badge, mark-all-read action, and activity links. Implemented `ProfilePopover` for both topbar avatar `J` and bottom-left sidebar user card with workspace switching, account settings, and sign-out. Captured screenshots `15_Notifications_Popover.png`, `16_Topbar_Profile_Popover.png`, and `17_Sidebar_Profile_Popover.png`. | verified |
+| 2026-10-21 06:50 | M0-POPOVERS | Interactive Notifications Popover & Profile Menus (topbar & sidebar) | Implemented `NotificationsPopover` with unread count, badge, mark-all-read action, and activity links. Implemented `ProfilePopover` for both topbar avatar `J` and bottom-left sidebar user card with workspace switching, account settings, and sign-out. Captured screenshots `15_Notifications_Popover.png`, `16_Topbar_Profile_Popover.png`, and `17_Sidebar_Profile_Popover.png`. | 72d6e57 |
+| 2026-10-21 07:05 | M0-THEME | Smooth spin & scale animation for ThemeToggle | Implemented lightweight, hardware-accelerated CSS rotation (`90deg`) and scale transitions between Sun and Moon in `theme-toggle.tsx`. Zero layout shift or external dependencies. Captured `18_Theme_Toggled_Dark.png` and `19_Theme_Toggled_Light.png`. | verified |
 
 ## UI preview handoff
 - URL: `http://localhost:3000/app` (running)
@@ -73,6 +74,8 @@
   - `artifacts/ui/15_Notifications_Popover.png`
   - `artifacts/ui/16_Topbar_Profile_Popover.png`
   - `artifacts/ui/17_Sidebar_Profile_Popover.png`
+  - `artifacts/ui/18_Theme_Toggled_Dark.png`
+  - `artifacts/ui/19_Theme_Toggled_Light.png`
 - Known UI defects: None. All routes, navigation links, modals, tabs, theme toggles, and filters function cleanly.
 
 ## External setup needed (only if encountered)
