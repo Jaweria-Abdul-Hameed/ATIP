@@ -1,9 +1,9 @@
 # ATIP — persistent agent checkpoint
 
-**State:** SETUP, M0, M1, M2 COMPLETED; PHASE M3 IN PROGRESS (M3-01, M3-02, M3-03, M3-04 verified).
-**Next action:** Phase M3 Task M3-05: Implement analysis jobs, progress events, idempotency/retries and persisted results.
+**State:** SETUP, M0, M1, M2 COMPLETED; PHASE M3 IN PROGRESS (M3-01, M3-02, M3-03, M3-04, M3-05 verified).
+**Next action:** Phase M3 Task M3-06: Wire repository tabs/graph to real analysis data and validate against fixture repos.
 **Active phase:** Phase M3 — repository mining and analysis.
-**Last verified commit:** `cca951f` (pushed to origin/main).
+**Last verified commit:** `5f8c9c0` (pushed to origin/main).
 **Current blockers:** None. No human intervention required.
 
 ## Progress log (append verified work only)
@@ -39,7 +39,8 @@
 | 2026-10-21 11:00 | M3-01 | Safe Git fetcher, immutable snapshots, sandbox path traversal defense, Alembic migration | `services/api/src/atip_api/modules/mining/`: `git_fetcher.py`, `snapshot.py`, `router.py`, `schemas.py`, Alembic `ab78872c6988`. `services/api/tests/test_mining_snapshots.py`. 51/51 pytest passed, ruff green. Exit code 0 | de44897 |
 | 2026-10-21 11:15 | M3-02 | Extract commits, diffs, file changes, rename detection, test classification, and ownership churn hotspots | `services/api/src/atip_api/modules/mining/`: `history_miner.py`, `git_fetcher.py`, `router.py`, `schemas.py`. `services/api/tests/test_mining_history.py`. 55/55 pytest passed, ruff green. Exit code 0 | 9eb8dc1 |
 | 2026-10-21 11:30 | M3-03 | Python + JS/TS import/dependency graph, AST & regex fallback, cycle detection, blast radius | `services/api/src/atip_api/modules/mining/`: `dependency_graph.py`, `router.py`, `schemas.py`. `services/api/tests/test_mining_dependencies.py`. 60/60 pytest passed, ruff green. Exit code 0 | cca951f |
-| 2026-10-21 11:45 | M3-04 | Code complexity (LOC, cyclomatic, maintainability), test discovery (pytest, jest/vitest), and coverage report ingestion (Coverage.py, LCOV, Cobertura) | `services/api/src/atip_api/modules/mining/`: `static_analyzer.py`, `router.py`, `schemas.py`. `services/api/tests/test_mining_static_analysis.py`. 70/70 pytest passed, full monorepo green. Exit code 0 | verified |
+| 2026-10-21 11:45 | M3-04 | Code complexity (LOC, cyclomatic, maintainability), test discovery (pytest, jest/vitest), and coverage report ingestion (Coverage.py, LCOV, Cobertura) | `services/api/src/atip_api/modules/mining/`: `static_analyzer.py`, `router.py`, `schemas.py`. `services/api/tests/test_mining_static_analysis.py`. 70/70 pytest passed, full monorepo green. Exit code 0 | 5f8c9c0 |
+| 2026-10-21 12:00 | M3-05 | Analysis jobs orchestrator (M3-01..M3-04 pipeline), idempotency, retries, SSE progress events & query endpoints | `services/api/src/atip_api/modules/mining/`: `orchestrator.py`, `router.py`, `schemas.py`. `services/api/tests/test_mining_analysis_jobs.py`. 74/74 pytest passed, full monorepo green. Exit code 0 | verified |
 
 ## Service status summary
 - PostgreSQL: `localhost:5432` (`atip_db`) — healthy, migrated to revision `ab78872c6988`.

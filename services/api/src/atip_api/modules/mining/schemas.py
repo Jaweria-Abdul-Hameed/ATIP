@@ -203,3 +203,42 @@ class CoverageSummaryRead(BaseModel):
     branch_coverage_pct: float
     files_count: int
     files: dict[str, CoverageFileDetailRead] = Field(default_factory=dict)
+
+
+class AnalysisTriggerRequest(BaseModel):
+    commit_sha: str | None = Field(default=None, example="7960a5e8")
+    branch: str | None = Field(default="main", example="main")
+    repo_path: str | None = Field(default=None, description="Local repo path for tests or fixtures")
+    force_rerun: bool = Field(
+        default=False, description="Force rerun even if analysis already completed"
+    )
+
+
+class AnalysisJobRead(BaseModel):
+    id: str
+    repository_id: str
+    status: str = Field(default="queued")
+    progress_pct: int = Field(default=0)
+    current_step: str = Field(default="Queued for analysis")
+    commit_sha: str = Field(default="HEAD")
+    error_message: str | None = None
+    started_at: str | None = None
+    completed_at: str | None = None
+
+
+class AnalysisRunDetailRead(BaseModel):
+    id: str
+    repository_id: str
+    commit_sha: str
+    branch: str
+    job_id: str | None = None
+    status: str
+    total_files: int
+    total_lines: int
+    languages_json: dict[str, Any] | None = None
+    complexity_summary: dict[str, Any] | None = None
+    test_inventory: list[dict[str, Any]] | None = None
+    coverage_summary: dict[str, Any] | None = None
+    dependency_count: int
+    completed_at: str | None = None
+    created_at: str

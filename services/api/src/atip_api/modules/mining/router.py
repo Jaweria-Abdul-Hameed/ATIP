@@ -1,13 +1,12 @@
 """Repository mining, commit history, snapshots, and analysis progress SSE router."""
 
 import asyncio
-import uuid
+import logging
 from collections import defaultdict
 from collections.abc import AsyncGenerator
 
 from fastapi import APIRouter, Depends, Query, Request, status
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -15,6 +14,7 @@ from atip_api.core.errors import BadRequestError, ForbiddenError, NotFoundError
 from atip_api.core.pagination import PaginationMetadata
 from atip_api.core.responses import DataResponse, PaginatedResponse, ResponseMeta
 from atip_api.core.sse import ServerSentEvent, sse_event_stream
+from atip_api.db.models.job import ExecutionJob, JobStatus, JobType
 from atip_api.db.models.mining import (
     AnalysisRun,
     CommitRecord,
@@ -23,12 +23,16 @@ from atip_api.db.models.mining import (
 )
 from atip_api.db.models.organization import OrganizationMembership, User
 from atip_api.db.models.repository import Repository, RepositorySnapshot
-from atip_api.db.session import get_db
+from atip_api.db.session import AsyncSessionLocal, get_db
 from atip_api.modules.identity.deps import get_current_active_user
 from atip_api.modules.mining.dependency_graph import DependencyGraphBuilder
 from atip_api.modules.mining.git_fetcher import GitExecutionError, GitSecurityError, SafeGitFetcher
 from atip_api.modules.mining.history_miner import HistoryMiner
+from atip_api.modules.mining.orchestrator import AnalysisPipelineOrchestrator
 from atip_api.modules.mining.schemas import (
+    AnalysisJobRead,
+    AnalysisRunDetailRead,
+    AnalysisTriggerRequest,
     CommitDetailRead,
     CommitRead,
     CoverageFileDetailRead,
@@ -55,6 +59,8 @@ from atip_api.modules.mining.static_analyzer import (
     CoverageIngester,
     TestDiscoverer,
 )
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["Mining & Analysis"])
 
@@ -1105,18 +1111,41 @@ async def get_repository_coverage(
     )
 
 
-class AnalysisTriggerRequest(BaseModel):
-    commit_sha: str | None = Field(default=None, example="7960a5e8")
-    branch: str | None = Field(default="main", example="main")
+async def _run_analysis_job_task(
+    job_id: str,
+    analysis_run_id: str,
+    repo_id: str,
+    org_id: str,
+    repo_path: str,
+    target_ref: str,
+) -> None:
+    """Background task running analysis pipeline in an isolated session."""
+    async with AsyncSessionLocal() as session:
+        try:
+            job = (
+                await session.execute(select(ExecutionJob).where(ExecutionJob.id == job_id))
+            ).scalar_one_or_none()
+            analysis_run = (
+                await session.execute(select(AnalysisRun).where(AnalysisRun.id == analysis_run_id))
+            ).scalar_one_or_none()
+            repo = (
+                await session.execute(select(Repository).where(Repository.id == repo_id))
+            ).scalar_one_or_none()
 
+            if not job or not analysis_run or not repo:
+                return
 
-class AnalysisJobRead(BaseModel):
-    id: str
-    repository_id: str
-    status: str = Field(default="running")
-    progress_pct: int = Field(default=0)
-    current_step: str = Field(default="Initializing repository checkout")
-    commit_sha: str = Field(default="HEAD")
+            orchestrator = AnalysisPipelineOrchestrator()
+            await orchestrator.run_pipeline(
+                session=session,
+                repository=repo,
+                job=job,
+                analysis_run=analysis_run,
+                repo_path=repo_path,
+                target_commit_or_ref=target_ref,
+            )
+        except Exception as e:
+            logger.exception("Background analysis execution error for job %s: %s", job_id, e)
 
 
 @router.post(
@@ -1128,65 +1157,328 @@ async def trigger_analysis(
     id: str,
     payload: AnalysisTriggerRequest,
     request: Request,
+    sync: bool = Query(default=False, description="Run synchronously for tests"),
     current_user: User = Depends(get_current_active_user),
     session: AsyncSession = Depends(get_db),
 ) -> DataResponse[AnalysisJobRead]:
-    """Trigger repository mining and static analysis job."""
+    """Trigger repository mining and static analysis job with idempotency and progress tracking."""
     org_id = _extract_org_id(request, current_user)
-    await _verify_repo_access(session, id, org_id, current_user.id)
+    repo = await _verify_repo_access(session, id, org_id, current_user.id)
 
-    job_id = f"job_ana_{uuid.uuid4().hex[:12]}"
-    job = AnalysisJobRead(
-        id=job_id,
+    target_repo_path = payload.repo_path or "."
+    target_ref = payload.commit_sha or payload.branch or "HEAD"
+    git_fetcher = SafeGitFetcher()
+
+    try:
+        resolved_sha = await git_fetcher.resolve_commit_sha(target_repo_path, target_ref)
+    except (GitSecurityError, GitExecutionError) as e:
+        raise NotFoundError(f"Could not resolve commit or ref '{target_ref}': {e}") from e
+
+    # 1. Idempotency Check: if not forcing rerun, check for existing completed or in-progress run
+    if not payload.force_rerun:
+        existing_run_stmt = (
+            select(AnalysisRun)
+            .where(
+                AnalysisRun.repository_id == id,
+                AnalysisRun.organization_id == org_id,
+                AnalysisRun.commit_sha == resolved_sha,
+            )
+            .order_by(AnalysisRun.created_at.desc())
+        )
+        existing_run = (await session.execute(existing_run_stmt)).scalars().first()
+        if existing_run:
+            if existing_run.job_id:
+                job_stmt = select(ExecutionJob).where(ExecutionJob.id == existing_run.job_id)
+                existing_job = (await session.execute(job_stmt)).scalar_one_or_none()
+                if existing_job:
+                    return DataResponse(
+                        data=AnalysisJobRead(
+                            id=existing_job.id,
+                            repository_id=id,
+                            status=(
+                                existing_job.status.value
+                                if hasattr(existing_job.status, "value")
+                                else str(existing_job.status)
+                            ),
+                            progress_pct=existing_job.progress_pct,
+                            current_step=existing_job.current_step or "Analysis step",
+                            commit_sha=resolved_sha,
+                            error_message=existing_job.error_message,
+                            started_at=existing_job.started_at,
+                            completed_at=existing_job.completed_at,
+                        )
+                    )
+
+            if existing_run.status == "completed":
+                return DataResponse(
+                    data=AnalysisJobRead(
+                        id=existing_run.id,
+                        repository_id=id,
+                        status="completed",
+                        progress_pct=100,
+                        current_step="Analysis completed successfully (cached)",
+                        commit_sha=resolved_sha,
+                        completed_at=(
+                            existing_run.completed_at.isoformat()
+                            if existing_run.completed_at
+                            else None
+                        ),
+                    )
+                )
+
+    # 2. Create ExecutionJob and AnalysisRun
+    job = ExecutionJob(
         repository_id=id,
-        status="queued",
+        organization_id=org_id,
+        job_type=JobType.REPO_MINING,
+        status=JobStatus.QUEUED,
         progress_pct=0,
         current_step="Queued for analysis worker",
-        commit_sha=payload.commit_sha or "HEAD",
+        metadata_json={
+            "commit_sha": resolved_sha,
+            "branch": payload.branch or repo.default_branch,
+            "repo_path": target_repo_path,
+        },
     )
-    return DataResponse(data=job)
+    session.add(job)
+    await session.flush()
+
+    analysis_run = AnalysisRun(
+        repository_id=id,
+        organization_id=org_id,
+        commit_sha=resolved_sha,
+        branch=payload.branch or repo.default_branch,
+        job_id=job.id,
+        status="queued",
+    )
+    session.add(analysis_run)
+    await session.commit()
+
+    # 3. Synchronous vs Background task execution
+    if sync:
+        orchestrator = AnalysisPipelineOrchestrator()
+        await orchestrator.run_pipeline(
+            session=session,
+            repository=repo,
+            job=job,
+            analysis_run=analysis_run,
+            repo_path=target_repo_path,
+            target_commit_or_ref=resolved_sha,
+        )
+    else:
+        asyncio.create_task(
+            _run_analysis_job_task(
+                job_id=job.id,
+                analysis_run_id=analysis_run.id,
+                repo_id=id,
+                org_id=org_id,
+                repo_path=target_repo_path,
+                target_ref=resolved_sha,
+            )
+        )
+
+    return DataResponse(
+        data=AnalysisJobRead(
+            id=job.id,
+            repository_id=id,
+            status=(job.status.value if hasattr(job.status, "value") else str(job.status)),
+            progress_pct=job.progress_pct,
+            current_step=job.current_step or "Queued for analysis worker",
+            commit_sha=resolved_sha,
+            error_message=job.error_message,
+            started_at=job.started_at,
+            completed_at=job.completed_at,
+        )
+    )
 
 
 @router.get("/analyses/{id}", response_model=DataResponse[AnalysisJobRead])
-async def get_analysis(id: str) -> DataResponse[AnalysisJobRead]:
-    """Get analysis job status and progress."""
-    job = AnalysisJobRead(
-        id=id,
-        repository_id="repo_nextjs_dashboard",
-        status="completed",
-        progress_pct=100,
-        current_step="Analysis completed successfully",
-        commit_sha="HEAD",
+async def get_analysis(
+    id: str,
+    request: Request,
+    current_user: User = Depends(get_current_active_user),
+    session: AsyncSession = Depends(get_db),
+) -> DataResponse[AnalysisJobRead]:
+    """Get analysis job status, current step, and progress percentage."""
+    org_id = _extract_org_id(request, current_user)
+
+    job_stmt = select(ExecutionJob).where(
+        ExecutionJob.id == id,
+        ExecutionJob.organization_id == org_id,
     )
-    return DataResponse(data=job)
+    job = (await session.execute(job_stmt)).scalar_one_or_none()
+
+    if job:
+        commit_sha = (job.metadata_json or {}).get("commit_sha", "HEAD")
+        return DataResponse(
+            data=AnalysisJobRead(
+                id=job.id,
+                repository_id=job.repository_id or "",
+                status=(job.status.value if hasattr(job.status, "value") else str(job.status)),
+                progress_pct=job.progress_pct,
+                current_step=job.current_step or "In progress",
+                commit_sha=commit_sha,
+                error_message=job.error_message,
+                started_at=job.started_at,
+                completed_at=job.completed_at,
+            )
+        )
+
+    run_stmt = select(AnalysisRun).where(
+        AnalysisRun.id == id,
+        AnalysisRun.organization_id == org_id,
+    )
+    run = (await session.execute(run_stmt)).scalar_one_or_none()
+    if not run:
+        raise NotFoundError("Analysis job or run not found")
+
+    return DataResponse(
+        data=AnalysisJobRead(
+            id=run.id,
+            repository_id=run.repository_id,
+            status=run.status,
+            progress_pct=100 if run.status == "completed" else 0,
+            current_step=("Analysis completed" if run.status == "completed" else run.status),
+            commit_sha=run.commit_sha,
+            completed_at=run.completed_at.isoformat() if run.completed_at else None,
+        )
+    )
+
+
+@router.get(
+    "/repositories/{id}/analyses",
+    response_model=PaginatedResponse[AnalysisRunDetailRead],
+)
+async def list_repository_analyses(
+    id: str,
+    request: Request,
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
+    current_user: User = Depends(get_current_active_user),
+    session: AsyncSession = Depends(get_db),
+) -> PaginatedResponse[AnalysisRunDetailRead]:
+    """List historical analysis runs for repository."""
+    org_id = _extract_org_id(request, current_user)
+    await _verify_repo_access(session, id, org_id, current_user.id)
+
+    offset = (page - 1) * page_size
+    total_stmt = select(func.count(AnalysisRun.id)).where(
+        AnalysisRun.repository_id == id,
+        AnalysisRun.organization_id == org_id,
+    )
+    total_count = (await session.execute(total_stmt)).scalar() or 0
+
+    runs_stmt = (
+        select(AnalysisRun)
+        .where(
+            AnalysisRun.repository_id == id,
+            AnalysisRun.organization_id == org_id,
+        )
+        .order_by(AnalysisRun.created_at.desc())
+        .offset(offset)
+        .limit(page_size)
+    )
+    runs = (await session.execute(runs_stmt)).scalars().all()
+
+    return PaginatedResponse(
+        data=[
+            AnalysisRunDetailRead(
+                id=r.id,
+                repository_id=r.repository_id,
+                commit_sha=r.commit_sha,
+                branch=r.branch,
+                job_id=r.job_id,
+                status=r.status,
+                total_files=r.total_files,
+                total_lines=r.total_lines,
+                languages_json=r.languages_json,
+                complexity_summary=r.complexity_summary,
+                test_inventory=r.test_inventory,
+                coverage_summary=r.coverage_summary,
+                dependency_count=r.dependency_count,
+                completed_at=r.completed_at.isoformat() if r.completed_at else None,
+                created_at=r.created_at.isoformat(),
+            )
+            for r in runs
+        ],
+        pagination=PaginationMetadata.create(
+            page=page,
+            page_size=page_size,
+            total_items=total_count,
+        ),
+        meta=ResponseMeta(),
+    )
 
 
 @router.get("/analyses/{id}/events")
-async def stream_analysis_events(id: str, request: Request) -> StreamingResponse:
+async def stream_analysis_events(
+    id: str,
+    request: Request,
+    session: AsyncSession = Depends(get_db),
+) -> StreamingResponse:
     """Stream real-time analysis progress events via Server-Sent Events (SSE)."""
 
     async def event_generator() -> AsyncGenerator[ServerSentEvent, None]:
-        steps = [
-            ("queued", 0, "Job queued in outbox worker"),
-            ("provisioning", 20, "Extracting commit diff and file changes"),
-            ("running", 50, "Building dependency and import graph"),
-            ("running", 80, "Discovering whitebox coverage objectives"),
-            ("completed", 100, "Analysis complete. Persisted artifacts to object store"),
-        ]
-        for step_idx, (job_status, pct, desc) in enumerate(steps):
+        prev_pct = -1
+        prev_step = ""
+        max_polls = 100
+
+        for _ in range(max_polls):
             if await request.is_disconnected():
                 break
-            yield ServerSentEvent(
-                id=f"evt_{id}_{step_idx}",
-                event="analysis_progress",
-                data={
-                    "job_id": id,
-                    "status": job_status,
-                    "progress_pct": pct,
-                    "current_step": desc,
-                },
-            )
-            await asyncio.sleep(0.01)
+
+            job_stmt = select(ExecutionJob).where(ExecutionJob.id == id)
+            job = (await session.execute(job_stmt)).scalar_one_or_none()
+
+            if not job:
+                run_stmt = select(AnalysisRun).where(AnalysisRun.id == id)
+                run = (await session.execute(run_stmt)).scalar_one_or_none()
+                if run:
+                    yield ServerSentEvent(
+                        id=f"evt_{id}_{run.status}",
+                        event="analysis_progress",
+                        data={
+                            "job_id": id,
+                            "status": run.status,
+                            "progress_pct": 100 if run.status == "completed" else 50,
+                            "current_step": (
+                                "Analysis complete" if run.status == "completed" else run.status
+                            ),
+                        },
+                    )
+                else:
+                    yield ServerSentEvent(
+                        id=f"evt_{id}_queued",
+                        event="analysis_progress",
+                        data={
+                            "job_id": id,
+                            "status": "queued",
+                            "progress_pct": 0,
+                            "current_step": "Waiting for analysis worker",
+                        },
+                    )
+                break
+
+            status_str = job.status.value if hasattr(job.status, "value") else str(job.status)
+            if job.progress_pct != prev_pct or job.current_step != prev_step:
+                prev_pct = job.progress_pct
+                prev_step = job.current_step or ""
+                yield ServerSentEvent(
+                    id=f"evt_{id}_{job.progress_pct}",
+                    event="analysis_progress",
+                    data={
+                        "job_id": job.id,
+                        "status": status_str,
+                        "progress_pct": job.progress_pct,
+                        "current_step": job.current_step or "",
+                        "error_message": job.error_message,
+                    },
+                )
+
+            if status_str in {"completed", "failed", "cancelled", "timed_out"}:
+                break
+
+            await asyncio.sleep(0.05)
 
     return StreamingResponse(
         sse_event_stream(event_generator()),

@@ -48,4 +48,8 @@ pnpm-debug.log*
 
 # Playwright & test reports
 test-results/
+
+# Local data & snapshots
+data/
+
 playwright-report/
