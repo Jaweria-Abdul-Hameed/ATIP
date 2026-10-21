@@ -3,7 +3,7 @@
 **State:** SETUP, M0, and M1 BACKEND AND LOCAL FOUNDATION COMPLETED AND VERIFIED.
 **Next action:** Phase M2 — identity, organizations and GitHub (M2-01: Implement OIDC login/session/logout/callback, protected routes and session expiry).
 **Active phase:** Phase M1 completed; waiting at phase boundary for next Antigravity session to execute M2.
-**Last verified commit:** Pending commit of verified M1 implementation.
+**Last verified commit:** 7f40028 (pushed to origin/main).
 **Current blockers:** None. No human intervention required.
 
 ## Progress log (append verified work only)
