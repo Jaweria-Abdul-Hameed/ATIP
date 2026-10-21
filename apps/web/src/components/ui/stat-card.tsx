@@ -32,7 +32,7 @@ export function StatCard({
         <div className="text-xs font-medium text-muted mb-2">{label}</div>
       )}
       <div className="flex items-center justify-between">
-        <div className="text-2xl sm:text-3xl font-semibold tracking-tight text-text flex items-center gap-2">
+        <div className="text-3xl sm:text-4xl font-serif font-normal tracking-[-0.035em] text-text flex items-center gap-2">
           {icon}
           <span>{value}</span>
         </div>

@@ -165,22 +165,22 @@ export default function ReportsPage() {
         <p className="text-xs text-muted leading-relaxed mb-4">
           Per-technique covered / uncovered / unknown / unsupported objectives, MC/DC evidence, and mutation scores filtered by repository snapshot.
         </p>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-mono">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
           <div className="p-3 rounded-lg border border-border bg-soft">
             <div className="text-[10px] text-muted">Statement Executed</div>
-            <div className="text-base font-bold text-text mt-1">253 / 312 (81%)</div>
+            <div className="text-base font-serif font-normal text-text mt-1">253 / 312 (81%)</div>
           </div>
           <div className="p-3 rounded-lg border border-border bg-soft">
             <div className="text-[10px] text-muted">Decisions Evaluated</div>
-            <div className="text-base font-bold text-text mt-1">62 / 84 (74%)</div>
+            <div className="text-base font-serif font-normal text-text mt-1">62 / 84 (74%)</div>
           </div>
           <div className="p-3 rounded-lg border border-border bg-soft">
             <div className="text-[10px] text-muted">MC/DC Independence</div>
-            <div className="text-base font-bold text-text mt-1">1 Verified Pair</div>
+            <div className="text-base font-serif font-normal text-text mt-1">1 Verified Pair</div>
           </div>
           <div className="p-3 rounded-lg border border-border bg-soft">
             <div className="text-[10px] text-muted">Mutants Killed</div>
-            <div className="text-base font-bold text-text mt-1">50 / 80 (62.5%)</div>
+            <div className="text-base font-serif font-normal text-text mt-1">50 / 80 (62.5%)</div>
           </div>
         </div>
       </div>

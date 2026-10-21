@@ -152,7 +152,7 @@ export default function RiskIntelligencePage() {
                   </td>
                   <td className="py-3.5 px-4 text-center">
                     <div className="inline-flex items-center gap-2">
-                      <span className="font-semibold text-text">
+                      <span className="font-serif text-base font-normal text-text">
                         {file.riskScore}
                       </span>
                       <Badge
@@ -213,13 +213,13 @@ export default function RiskIntelligencePage() {
               <div className="grid grid-cols-2 gap-3">
                 <div className="p-4 rounded-xl border border-border bg-soft">
                   <div className="text-[11px] text-muted">Risk Score</div>
-                  <div className="text-2xl font-bold text-text mt-1">
-                    {selectedFile.riskScore} / 100
+                  <div className="text-3xl font-serif font-normal text-text mt-1">
+                    {selectedFile.riskScore} <span className="text-xs font-sans text-muted">/ 100</span>
                   </div>
                 </div>
                 <div className="p-4 rounded-xl border border-border bg-soft">
                   <div className="text-[11px] text-muted">Test Coverage</div>
-                  <div className="text-2xl font-bold text-text mt-1">
+                  <div className="text-3xl font-serif font-normal text-text mt-1">
                     {selectedFile.coveragePercent}%
                   </div>
                 </div>

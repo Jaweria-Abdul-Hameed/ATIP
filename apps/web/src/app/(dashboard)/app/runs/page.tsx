@@ -232,10 +232,10 @@ export default function TestRunsPage() {
             <div className="flex items-center gap-4">
               <span className="flex items-center gap-1.5 text-text font-medium">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
-                {selectedRun.passedCount} passed
+                <span className="font-serif text-sm font-normal">{selectedRun.passedCount}</span> passed
               </span>
-              <span>{selectedRun.failedCount} failed</span>
-              <span>{selectedRun.skippedCount} skipped</span>
+              <span><span className="font-serif text-sm font-normal text-text">{selectedRun.failedCount}</span> failed</span>
+              <span><span className="font-serif text-sm font-normal text-text">{selectedRun.skippedCount}</span> skipped</span>
             </div>
             <div className="flex items-center gap-1 font-mono text-xs">
               <Clock className="w-3.5 h-3.5 text-muted" />
