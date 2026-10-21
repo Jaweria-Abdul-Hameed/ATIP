@@ -105,3 +105,40 @@ class HotspotRead(BaseModel):
 class MineHistoryRequest(BaseModel):
     branch: str = Field(default="HEAD", description="Branch name or ref to mine")
     max_commits: int = Field(default=50, ge=1, le=500, description="Max commits to extract")
+
+
+class DependencyEdgeRead(BaseModel):
+    source: str
+    target: str
+    target_module: str
+    target_file: str | None = None
+    is_external: bool = False
+    import_type: str
+    line: int = 1
+
+
+class DependencyNodeRead(BaseModel):
+    id: str
+    file_path: str
+    fan_in: int = 0
+    fan_out: int = 0
+    dependencies: list[str] = Field(default_factory=list)
+    dependents: list[str] = Field(default_factory=list)
+
+
+class DependencyGraphRead(BaseModel):
+    commit_sha: str
+    total_nodes: int
+    total_edges: int
+    internal_edges_count: int
+    external_edges_count: int
+    circular_cycles: list[list[str]] = Field(default_factory=list)
+    nodes: list[DependencyNodeRead]
+    edges: list[DependencyEdgeRead]
+
+
+class FileDependencyDetailRead(BaseModel):
+    file_path: str
+    direct_dependencies: list[DependencyEdgeRead]
+    reverse_dependents: list[DependencyEdgeRead]
+    blast_radius_count: int

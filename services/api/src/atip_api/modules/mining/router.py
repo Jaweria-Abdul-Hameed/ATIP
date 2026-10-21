@@ -2,6 +2,7 @@
 
 import asyncio
 import uuid
+from collections import defaultdict
 from collections.abc import AsyncGenerator
 
 from fastapi import APIRouter, Depends, Query, Request, status
@@ -14,17 +15,22 @@ from atip_api.core.errors import BadRequestError, ForbiddenError, NotFoundError
 from atip_api.core.pagination import PaginationMetadata
 from atip_api.core.responses import DataResponse, PaginatedResponse, ResponseMeta
 from atip_api.core.sse import ServerSentEvent, sse_event_stream
-from atip_api.db.models.mining import CommitRecord, FileChangeRecord
+from atip_api.db.models.mining import CommitRecord, DependencyEdgeRecord, FileChangeRecord
 from atip_api.db.models.organization import OrganizationMembership, User
 from atip_api.db.models.repository import Repository, RepositorySnapshot
 from atip_api.db.session import get_db
 from atip_api.modules.identity.deps import get_current_active_user
+from atip_api.modules.mining.dependency_graph import DependencyGraphBuilder
 from atip_api.modules.mining.git_fetcher import GitExecutionError, GitSecurityError, SafeGitFetcher
 from atip_api.modules.mining.history_miner import HistoryMiner
 from atip_api.modules.mining.schemas import (
     CommitDetailRead,
     CommitRead,
+    DependencyEdgeRead,
+    DependencyGraphRead,
+    DependencyNodeRead,
     FileChangeRead,
+    FileDependencyDetailRead,
     HotspotRead,
     MineHistoryRequest,
     SnapshotCreateRequest,
@@ -547,6 +553,206 @@ async def get_repository_hotspots(
             )
             for h in hotspots
         ]
+    )
+
+
+@router.get(
+    "/repositories/{id}/dependencies",
+    response_model=DataResponse[DependencyGraphRead],
+)
+async def get_repository_dependencies(
+    id: str,
+    request: Request,
+    commit_sha: str = Query(default="HEAD"),
+    repo_path: str | None = Query(default=None),
+    current_user: User = Depends(get_current_active_user),
+    session: AsyncSession = Depends(get_db),
+) -> DataResponse[DependencyGraphRead]:
+    """Get import and dependency graph with nodes, edges, and cycles."""
+    org_id = _extract_org_id(request, current_user)
+    await _verify_repo_access(session, id, org_id, current_user.id)
+
+    target_repo_path = repo_path or "."
+    git_fetcher = SafeGitFetcher()
+    try:
+        resolved_sha = await git_fetcher.resolve_commit_sha(target_repo_path, commit_sha)
+    except GitSecurityError as e:
+        raise BadRequestError(f"Invalid commit ref: {e}") from e
+    except GitExecutionError as e:
+        raise NotFoundError(f"Could not resolve commit {commit_sha}: {e}") from e
+
+    # 1. Check if graph was already built and persisted in DB
+    edge_stmt = select(DependencyEdgeRecord).where(
+        DependencyEdgeRecord.repository_id == id,
+        DependencyEdgeRecord.organization_id == org_id,
+        DependencyEdgeRecord.commit_sha == resolved_sha,
+    )
+    existing_edges = (await session.execute(edge_stmt)).scalars().all()
+
+    builder = DependencyGraphBuilder(git_fetcher=git_fetcher)
+    if existing_edges:
+        file_to_deps: dict[str, list[str]] = defaultdict(list)
+        file_to_dependents: dict[str, list[str]] = defaultdict(list)
+        edges_read: list[DependencyEdgeRead] = []
+
+        for de in existing_edges:
+            edges_read.append(
+                DependencyEdgeRead(
+                    source=de.source_file,
+                    target=de.target_file or de.target_module,
+                    target_module=de.target_module,
+                    target_file=de.target_file,
+                    is_external=de.is_external,
+                    import_type=de.import_type,
+                    line=(de.edge_metadata or {}).get("line_number", 1),
+                )
+            )
+            if de.target_file:
+                file_to_deps[de.source_file].append(de.target_file)
+                file_to_dependents[de.target_file].append(de.source_file)
+
+        all_files = set(file_to_deps.keys()).union(file_to_dependents.keys())
+        nodes_read = [
+            DependencyNodeRead(
+                id=f,
+                file_path=f,
+                fan_in=len(file_to_dependents[f]),
+                fan_out=len(file_to_deps[f]),
+                dependencies=file_to_deps[f],
+                dependents=file_to_dependents[f],
+            )
+            for f in all_files
+        ]
+        cycles = builder._find_cycles(file_to_deps)
+
+        return DataResponse(
+            data=DependencyGraphRead(
+                commit_sha=resolved_sha,
+                total_nodes=len(nodes_read),
+                total_edges=len(edges_read),
+                internal_edges_count=sum(1 for e in edges_read if not e.is_external),
+                external_edges_count=sum(1 for e in edges_read if e.is_external),
+                circular_cycles=cycles,
+                nodes=nodes_read,
+                edges=edges_read,
+            )
+        )
+
+    # 2. Build and persist fresh graph
+    graph_data = await builder.build_and_persist_graph(
+        session=session,
+        org_id=org_id,
+        repository_id=id,
+        commit_sha=resolved_sha,
+        repo_path=target_repo_path,
+    )
+
+    return DataResponse(
+        data=DependencyGraphRead(
+            commit_sha=graph_data["commit_sha"],
+            total_nodes=graph_data["total_nodes"],
+            total_edges=graph_data["total_edges"],
+            internal_edges_count=graph_data["internal_edges_count"],
+            external_edges_count=graph_data["external_edges_count"],
+            circular_cycles=graph_data["circular_cycles"],
+            nodes=[
+                DependencyNodeRead(
+                    id=n["id"],
+                    file_path=n["file_path"],
+                    fan_in=n["fan_in"],
+                    fan_out=n["fan_out"],
+                    dependencies=n["dependencies"],
+                    dependents=n["dependents"],
+                )
+                for n in graph_data["nodes"]
+            ],
+            edges=[
+                DependencyEdgeRead(
+                    source=e["source"],
+                    target=e["target"],
+                    target_module=e["target_module"],
+                    target_file=e["target_file"],
+                    is_external=e["is_external"],
+                    import_type=e["import_type"],
+                    line=e["line"],
+                )
+                for e in graph_data["edges"]
+            ],
+        )
+    )
+
+
+@router.get(
+    "/repositories/{id}/dependencies/file",
+    response_model=DataResponse[FileDependencyDetailRead],
+)
+async def get_file_dependencies(
+    id: str,
+    request: Request,
+    path: str = Query(..., description="File path relative to repository root"),
+    commit_sha: str = Query(default="HEAD"),
+    repo_path: str | None = Query(default=None),
+    current_user: User = Depends(get_current_active_user),
+    session: AsyncSession = Depends(get_db),
+) -> DataResponse[FileDependencyDetailRead]:
+    """Get direct dependencies and reverse dependents (blast radius) for a specific file."""
+    org_id = _extract_org_id(request, current_user)
+    await _verify_repo_access(session, id, org_id, current_user.id)
+
+    target_repo_path = repo_path or "."
+    git_fetcher = SafeGitFetcher()
+    try:
+        resolved_sha = await git_fetcher.resolve_commit_sha(target_repo_path, commit_sha)
+    except Exception as e:
+        raise NotFoundError(f"Commit not found: {e}") from e
+
+    # Direct dependencies (where file is source)
+    stmt_direct = select(DependencyEdgeRecord).where(
+        DependencyEdgeRecord.repository_id == id,
+        DependencyEdgeRecord.organization_id == org_id,
+        DependencyEdgeRecord.commit_sha == resolved_sha,
+        DependencyEdgeRecord.source_file == path,
+    )
+    direct_edges = (await session.execute(stmt_direct)).scalars().all()
+
+    # Reverse dependents (where file is target)
+    stmt_reverse = select(DependencyEdgeRecord).where(
+        DependencyEdgeRecord.repository_id == id,
+        DependencyEdgeRecord.organization_id == org_id,
+        DependencyEdgeRecord.commit_sha == resolved_sha,
+        DependencyEdgeRecord.target_file == path,
+    )
+    reverse_edges = (await session.execute(stmt_reverse)).scalars().all()
+
+    return DataResponse(
+        data=FileDependencyDetailRead(
+            file_path=path,
+            direct_dependencies=[
+                DependencyEdgeRead(
+                    source=de.source_file,
+                    target=de.target_file or de.target_module,
+                    target_module=de.target_module,
+                    target_file=de.target_file,
+                    is_external=de.is_external,
+                    import_type=de.import_type,
+                    line=(de.edge_metadata or {}).get("line_number", 1),
+                )
+                for de in direct_edges
+            ],
+            reverse_dependents=[
+                DependencyEdgeRead(
+                    source=re.source_file,
+                    target=re.target_file or re.target_module,
+                    target_module=re.target_module,
+                    target_file=re.target_file,
+                    is_external=re.is_external,
+                    import_type=re.import_type,
+                    line=(re.edge_metadata or {}).get("line_number", 1),
+                )
+                for re in reverse_edges
+            ],
+            blast_radius_count=len(reverse_edges),
+        )
     )
 
 
