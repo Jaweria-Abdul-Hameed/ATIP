@@ -1,9 +1,11 @@
 "use client";
 
 import React from "react";
-import { Search, Bell, Menu } from "lucide-react";
+import { Search, Menu } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Badge } from "@/components/ui/badge";
+import { NotificationsPopover } from "@/components/shell/notifications-popover";
+import { ProfilePopover } from "@/components/shell/profile-popover";
 
 interface TopbarProps {
   onOpenMobileMenu?: () => void;
@@ -60,18 +62,9 @@ export function Topbar({ onOpenMobileMenu, breadcrumbs }: TopbarProps) {
 
         <ThemeToggle />
 
-        <button
-          className="p-2 rounded-lg border border-border bg-surface text-muted hover:text-text hover:bg-soft transition-colors relative"
-          aria-label="Notifications"
-          title="Notifications"
-        >
-          <Bell className="w-4 h-4" />
-          <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-amber-500" />
-        </button>
+        <NotificationsPopover />
 
-        <div className="w-7 h-7 rounded-full bg-neutral-800 text-white flex items-center justify-center font-semibold text-xs shrink-0 cursor-default">
-          J
-        </div>
+        <ProfilePopover variant="topbar" />
       </div>
     </header>
   );
