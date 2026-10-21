@@ -64,7 +64,7 @@
 - [x] **M3-03** Implement Python + JS/TS import/dependency graph with parser fallback and provenance.
 - [x] **M3-04** Compute basic complexity/static-analysis features; discover tests and ingest available coverage.
 - [x] **M3-05** Implement analysis jobs, progress events, idempotency/retries and persisted results.
-- [ ] **M3-06** Wire repository tabs/graph to real analysis data and validate against fixture repos.
+- [x] **M3-06** Wire repository tabs/graph to real analysis data and validate against fixture repos.
 
 **Exit gate:** all checkboxes in this phase are verified; tests/build and security review pass; relevant UI works; status/commit updated.
 

@@ -81,8 +81,70 @@ export const api = {
     }
   },
 
-  getCommits: async (_repoId?: string): Promise<CommitItem[]> => {
-    return DEMO_COMMITS;
+  getCommits: async (repoId?: string, opts?: { branch?: string; forceLive?: boolean }): Promise<CommitItem[]> => {
+    if (USE_FIXTURES && !opts?.forceLive) return DEMO_COMMITS;
+    if (!repoId) return DEMO_COMMITS;
+    try {
+      const res = await apiClient.getRepositoryCommits(repoId, { branch: opts?.branch });
+      if (res.data.length === 0) return [];
+      return res.data.map((c) => ({
+        hash: c.commit_sha,
+        shortHash: c.commit_sha.slice(0, 7),
+        message: c.message,
+        author: c.author_name || "Unknown",
+        timestamp: c.committed_at ? new Date(c.committed_at).toLocaleString() : "Recently",
+        branch: opts?.branch || "main",
+        risk: c.files_changed_count > 5 ? "high" : c.files_changed_count > 2 ? "medium" : "low",
+        filesChanged: c.files_changed_count,
+        insertions: c.insertions,
+        deletions: c.deletions,
+      }));
+    } catch {
+      return USE_FIXTURES ? DEMO_COMMITS : [];
+    }
+  },
+
+  getDependencies: async (repoId: string, commitSha?: string) => {
+    try {
+      return await apiClient.getRepositoryDependencies(repoId, commitSha);
+    } catch {
+      return null;
+    }
+  },
+
+  getCoverage: async (repoId: string, commitSha?: string) => {
+    try {
+      return await apiClient.getRepositoryCoverage(repoId, commitSha);
+    } catch {
+      return null;
+    }
+  },
+
+  getSnapshotTree: async (repoId: string, commitSha: string) => {
+    try {
+      return await apiClient.getRepositorySnapshotTree(repoId, commitSha);
+    } catch {
+      return [];
+    }
+  },
+
+  getComplexity: async (repoId: string, commitSha?: string) => {
+    try {
+      return await apiClient.getRepositoryComplexity(repoId, commitSha);
+    } catch {
+      return [];
+    }
+  },
+
+  triggerAnalysis: async (
+    repoId: string,
+    payload: { commit_sha?: string; branch?: string; force_rerun?: boolean }
+  ) => {
+    return await apiClient.triggerRepositoryAnalysis(repoId, payload);
+  },
+
+  getAnalysisJob: async (jobId: string) => {
+    return await apiClient.getAnalysisJob(jobId);
   },
 
   getRiskyFiles: async (_repoId?: string): Promise<RiskyFile[]> => {
