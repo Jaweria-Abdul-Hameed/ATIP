@@ -15,7 +15,12 @@ from atip_api.core.errors import BadRequestError, ForbiddenError, NotFoundError
 from atip_api.core.pagination import PaginationMetadata
 from atip_api.core.responses import DataResponse, PaginatedResponse, ResponseMeta
 from atip_api.core.sse import ServerSentEvent, sse_event_stream
-from atip_api.db.models.mining import CommitRecord, DependencyEdgeRecord, FileChangeRecord
+from atip_api.db.models.mining import (
+    AnalysisRun,
+    CommitRecord,
+    DependencyEdgeRecord,
+    FileChangeRecord,
+)
 from atip_api.db.models.organization import OrganizationMembership, User
 from atip_api.db.models.repository import Repository, RepositorySnapshot
 from atip_api.db.session import get_db
@@ -26,11 +31,17 @@ from atip_api.modules.mining.history_miner import HistoryMiner
 from atip_api.modules.mining.schemas import (
     CommitDetailRead,
     CommitRead,
+    CoverageFileDetailRead,
+    CoverageIngestRequest,
+    CoverageSummaryRead,
     DependencyEdgeRead,
     DependencyGraphRead,
     DependencyNodeRead,
+    DiscoveredTestRead,
     FileChangeRead,
+    FileComplexityRead,
     FileDependencyDetailRead,
+    FunctionComplexityRead,
     HotspotRead,
     MineHistoryRequest,
     SnapshotCreateRequest,
@@ -39,6 +50,11 @@ from atip_api.modules.mining.schemas import (
     SnapshotTreeItem,
 )
 from atip_api.modules.mining.snapshot import SafePathTraversalError, SnapshotError, SnapshotManager
+from atip_api.modules.mining.static_analyzer import (
+    CodeComplexityAnalyzer,
+    CoverageIngester,
+    TestDiscoverer,
+)
 
 router = APIRouter(tags=["Mining & Analysis"])
 
@@ -752,6 +768,339 @@ async def get_file_dependencies(
                 for re in reverse_edges
             ],
             blast_radius_count=len(reverse_edges),
+        )
+    )
+
+
+@router.get(
+    "/repositories/{id}/complexity",
+    response_model=DataResponse[list[FileComplexityRead]],
+)
+async def get_repository_complexity(
+    id: str,
+    request: Request,
+    commit_sha: str = Query(default="HEAD"),
+    file_path: str | None = Query(default=None),
+    repo_path: str | None = Query(default=None),
+    current_user: User = Depends(get_current_active_user),
+    session: AsyncSession = Depends(get_db),
+) -> DataResponse[list[FileComplexityRead]]:
+    """Compute LOC, Cyclomatic Complexity, function inventory, and maintainability index."""
+    org_id = _extract_org_id(request, current_user)
+    await _verify_repo_access(session, id, org_id, current_user.id)
+
+    target_repo_path = repo_path or "."
+    git_fetcher = SafeGitFetcher()
+    try:
+        resolved_sha = await git_fetcher.resolve_commit_sha(target_repo_path, commit_sha)
+    except (GitSecurityError, GitExecutionError) as e:
+        raise NotFoundError(f"Could not resolve commit {commit_sha}: {e}") from e
+
+    if file_path:
+        try:
+            content_bytes = await git_fetcher.read_file_at_commit(
+                target_repo_path, resolved_sha, file_path
+            )
+        except (GitSecurityError, GitExecutionError) as e:
+            raise NotFoundError(f"File '{file_path}' not found at commit {commit_sha}: {e}") from e
+        text = content_bytes.decode("utf-8", errors="replace")
+        metric = CodeComplexityAnalyzer.analyze_source(text, file_path)
+        return DataResponse(
+            data=[
+                FileComplexityRead(
+                    file_path=metric.file_path,
+                    language=metric.language,
+                    lines_total=metric.lines_total,
+                    lines_code=metric.lines_code,
+                    lines_comments=metric.lines_comments,
+                    lines_blank=metric.lines_blank,
+                    cyclomatic_complexity=metric.cyclomatic_complexity,
+                    average_function_complexity=metric.average_function_complexity,
+                    max_function_complexity=metric.max_function_complexity,
+                    maintainability_index=metric.maintainability_index,
+                    functions=[
+                        FunctionComplexityRead(
+                            name=f.name,
+                            line_start=f.line_start,
+                            line_end=f.line_end,
+                            complexity=f.complexity,
+                            arg_count=f.arg_count,
+                        )
+                        for f in metric.functions
+                    ],
+                )
+            ]
+        )
+
+    try:
+        tree = await git_fetcher.list_tree_files(target_repo_path, resolved_sha)
+    except (GitSecurityError, GitExecutionError) as e:
+        raise NotFoundError(f"Could not list tree for commit {resolved_sha}: {e}") from e
+
+    results: list[FileComplexityRead] = []
+    source_exts = {".py", ".pyw", ".ts", ".tsx", ".js", ".jsx"}
+    for f in tree:
+        p = f["path"]
+        if any(p.endswith(ext) for ext in source_exts) and not p.startswith("node_modules/"):
+            try:
+                content_bytes = await git_fetcher.read_file_at_commit(
+                    target_repo_path, resolved_sha, p
+                )
+                text = content_bytes.decode("utf-8", errors="replace")
+                metric = CodeComplexityAnalyzer.analyze_source(text, p)
+                results.append(
+                    FileComplexityRead(
+                        file_path=metric.file_path,
+                        language=metric.language,
+                        lines_total=metric.lines_total,
+                        lines_code=metric.lines_code,
+                        lines_comments=metric.lines_comments,
+                        lines_blank=metric.lines_blank,
+                        cyclomatic_complexity=metric.cyclomatic_complexity,
+                        average_function_complexity=metric.average_function_complexity,
+                        max_function_complexity=metric.max_function_complexity,
+                        maintainability_index=metric.maintainability_index,
+                        functions=[
+                            FunctionComplexityRead(
+                                name=fn.name,
+                                line_start=fn.line_start,
+                                line_end=fn.line_end,
+                                complexity=fn.complexity,
+                                arg_count=fn.arg_count,
+                            )
+                            for fn in metric.functions
+                        ],
+                    )
+                )
+            except Exception:
+                continue
+
+    return DataResponse(data=results)
+
+
+@router.get(
+    "/repositories/{id}/tests",
+    response_model=DataResponse[list[DiscoveredTestRead]],
+)
+async def get_repository_tests(
+    id: str,
+    request: Request,
+    commit_sha: str = Query(default="HEAD"),
+    repo_path: str | None = Query(default=None),
+    current_user: User = Depends(get_current_active_user),
+    session: AsyncSession = Depends(get_db),
+) -> DataResponse[list[DiscoveredTestRead]]:
+    """Discover existing test suites, test cases, and framework types across repository."""
+    org_id = _extract_org_id(request, current_user)
+    await _verify_repo_access(session, id, org_id, current_user.id)
+
+    target_repo_path = repo_path or "."
+    git_fetcher = SafeGitFetcher()
+    try:
+        resolved_sha = await git_fetcher.resolve_commit_sha(target_repo_path, commit_sha)
+    except (GitSecurityError, GitExecutionError) as e:
+        raise NotFoundError(f"Could not resolve commit {commit_sha}: {e}") from e
+
+    try:
+        tree = await git_fetcher.list_tree_files(target_repo_path, resolved_sha)
+    except (GitSecurityError, GitExecutionError) as e:
+        raise NotFoundError(f"Could not list tree for commit {resolved_sha}: {e}") from e
+
+    discovered: list[DiscoveredTestRead] = []
+    test_exts = {".py", ".pyw", ".ts", ".tsx", ".js", ".jsx"}
+    for f in tree:
+        p = f["path"]
+        is_test_file = (
+            "test" in p.lower()
+            or "spec" in p.lower()
+            or p.endswith(("_test.py", "test_.py", ".test.ts", ".test.js", ".spec.ts", ".spec.js"))
+        )
+        if is_test_file and any(p.endswith(ext) for ext in test_exts):
+            try:
+                content_bytes = await git_fetcher.read_file_at_commit(
+                    target_repo_path, resolved_sha, p
+                )
+                text = content_bytes.decode("utf-8", errors="replace")
+                cases = TestDiscoverer.discover_in_file(text, p)
+                for c in cases:
+                    discovered.append(
+                        DiscoveredTestRead(
+                            file_path=c.file_path,
+                            suite_name=c.suite_name,
+                            test_name=c.test_name,
+                            line_number=c.line_number,
+                            framework=c.framework,
+                            language=c.language,
+                        )
+                    )
+            except Exception:
+                continue
+
+    return DataResponse(data=discovered)
+
+
+@router.post(
+    "/repositories/{id}/coverage/ingest",
+    response_model=DataResponse[CoverageSummaryRead],
+    status_code=status.HTTP_201_CREATED,
+)
+async def ingest_repository_coverage(
+    id: str,
+    payload: CoverageIngestRequest,
+    request: Request,
+    commit_sha: str = Query(default="HEAD"),
+    current_user: User = Depends(get_current_active_user),
+    session: AsyncSession = Depends(get_db),
+) -> DataResponse[CoverageSummaryRead]:
+    """Ingest real coverage report (Coverage.py JSON, LCOV info, or Cobertura XML)."""
+    org_id = _extract_org_id(request, current_user)
+    repo = await _verify_repo_access(session, id, org_id, current_user.id)
+
+    fmt = payload.format_type.lower()
+    try:
+        if fmt in {"coverage.json", "json"}:
+            report = CoverageIngester.parse_coverage_json(payload.content)
+        elif fmt in {"lcov", "lcov.info"}:
+            report = CoverageIngester.parse_lcov(payload.content)
+        elif fmt in {"cobertura", "cobertura_xml", "xml"}:
+            report = CoverageIngester.parse_cobertura_xml(payload.content)
+        else:
+            raise BadRequestError(
+                f"Unsupported coverage format '{payload.format_type}'. Expected coverage.json, lcov, or cobertura_xml."
+            )
+    except Exception as e:
+        if isinstance(e, BadRequestError):
+            raise
+        raise BadRequestError(
+            f"Failed to parse coverage content as {payload.format_type}: {e}"
+        ) from e
+
+    files_dict = {
+        fp: {
+            "file_path": fd.file_path,
+            "statements_total": fd.statements_total,
+            "statements_covered": fd.statements_covered,
+            "coverage_pct": fd.coverage_pct,
+            "covered_lines": fd.covered_lines,
+            "uncovered_lines": fd.uncovered_lines,
+        }
+        for fp, fd in report.files.items()
+    }
+    summary_dict = {
+        "format_type": report.format_type,
+        "statements_total": report.statements_total,
+        "statements_covered": report.statements_covered,
+        "statement_coverage_pct": report.statement_coverage_pct,
+        "branches_total": report.branches_total,
+        "branches_covered": report.branches_covered,
+        "branch_coverage_pct": report.branch_coverage_pct,
+        "files_count": len(report.files),
+        "files": files_dict,
+    }
+
+    analysis_stmt = (
+        select(AnalysisRun)
+        .where(
+            AnalysisRun.repository_id == id,
+            AnalysisRun.organization_id == org_id,
+            AnalysisRun.commit_sha == commit_sha,
+        )
+        .order_by(AnalysisRun.created_at.desc())
+    )
+    analysis = (await session.execute(analysis_stmt)).scalars().first()
+
+    if not analysis:
+        analysis = AnalysisRun(
+            repository_id=id,
+            organization_id=org_id,
+            commit_sha=commit_sha,
+            branch=repo.default_branch,
+            status="completed",
+            coverage_summary=summary_dict,
+        )
+        session.add(analysis)
+    else:
+        analysis.coverage_summary = summary_dict
+
+    await session.commit()
+
+    return DataResponse(
+        data=CoverageSummaryRead(
+            format_type=report.format_type,
+            statements_total=report.statements_total,
+            statements_covered=report.statements_covered,
+            statement_coverage_pct=report.statement_coverage_pct,
+            branches_total=report.branches_total,
+            branches_covered=report.branches_covered,
+            branch_coverage_pct=report.branch_coverage_pct,
+            files_count=len(report.files),
+            files={
+                fp: CoverageFileDetailRead(
+                    file_path=fd.file_path,
+                    statements_total=fd.statements_total,
+                    statements_covered=fd.statements_covered,
+                    coverage_pct=fd.coverage_pct,
+                    covered_lines=fd.covered_lines,
+                    uncovered_lines=fd.uncovered_lines,
+                )
+                for fp, fd in report.files.items()
+            },
+        )
+    )
+
+
+@router.get(
+    "/repositories/{id}/coverage",
+    response_model=DataResponse[CoverageSummaryRead | None],
+)
+async def get_repository_coverage(
+    id: str,
+    request: Request,
+    commit_sha: str | None = Query(default=None),
+    current_user: User = Depends(get_current_active_user),
+    session: AsyncSession = Depends(get_db),
+) -> DataResponse[CoverageSummaryRead | None]:
+    """Retrieve ingested coverage summary. If not ingested, returns None (honest empty state)."""
+    org_id = _extract_org_id(request, current_user)
+    await _verify_repo_access(session, id, org_id, current_user.id)
+
+    query = select(AnalysisRun).where(
+        AnalysisRun.repository_id == id,
+        AnalysisRun.organization_id == org_id,
+        AnalysisRun.coverage_summary.isnot(None),
+    )
+    if commit_sha:
+        query = query.where(AnalysisRun.commit_sha == commit_sha)
+    query = query.order_by(AnalysisRun.created_at.desc())
+
+    analysis = (await session.execute(query)).scalars().first()
+    if not analysis or not analysis.coverage_summary:
+        return DataResponse(data=None)
+
+    cov = analysis.coverage_summary
+    files_data = {
+        fp: CoverageFileDetailRead(
+            file_path=f["file_path"],
+            statements_total=f["statements_total"],
+            statements_covered=f["statements_covered"],
+            coverage_pct=f["coverage_pct"],
+            covered_lines=f.get("covered_lines", []),
+            uncovered_lines=f.get("uncovered_lines", []),
+        )
+        for fp, f in cov.get("files", {}).items()
+    }
+
+    return DataResponse(
+        data=CoverageSummaryRead(
+            format_type=cov.get("format_type", "unknown"),
+            statements_total=cov.get("statements_total", 0),
+            statements_covered=cov.get("statements_covered", 0),
+            statement_coverage_pct=cov.get("statement_coverage_pct", 0.0),
+            branches_total=cov.get("branches_total", 0),
+            branches_covered=cov.get("branches_covered", 0),
+            branch_coverage_pct=cov.get("branch_coverage_pct", 0.0),
+            files_count=cov.get("files_count", len(files_data)),
+            files=files_data,
         )
     )
 

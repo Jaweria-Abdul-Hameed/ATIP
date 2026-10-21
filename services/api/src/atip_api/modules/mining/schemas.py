@@ -142,3 +142,64 @@ class FileDependencyDetailRead(BaseModel):
     direct_dependencies: list[DependencyEdgeRead]
     reverse_dependents: list[DependencyEdgeRead]
     blast_radius_count: int
+
+
+class FunctionComplexityRead(BaseModel):
+    name: str
+    line_start: int
+    line_end: int
+    complexity: int
+    arg_count: int
+
+
+class FileComplexityRead(BaseModel):
+    file_path: str
+    language: str
+    lines_total: int
+    lines_code: int
+    lines_comments: int
+    lines_blank: int
+    cyclomatic_complexity: int
+    average_function_complexity: float
+    max_function_complexity: int
+    maintainability_index: float
+    functions: list[FunctionComplexityRead] = Field(default_factory=list)
+
+
+class DiscoveredTestRead(BaseModel):
+    file_path: str
+    suite_name: str
+    test_name: str
+    line_number: int
+    framework: str
+    language: str
+
+
+class CoverageIngestRequest(BaseModel):
+    format_type: str = Field(
+        default="coverage.json", description="coverage.json | lcov | cobertura_xml"
+    )
+    content: str = Field(
+        description="Raw coverage file contents (JSON string, LCOV info text, or Cobertura XML)"
+    )
+
+
+class CoverageFileDetailRead(BaseModel):
+    file_path: str
+    statements_total: int
+    statements_covered: int
+    coverage_pct: float
+    covered_lines: list[int] = Field(default_factory=list)
+    uncovered_lines: list[int] = Field(default_factory=list)
+
+
+class CoverageSummaryRead(BaseModel):
+    format_type: str
+    statements_total: int
+    statements_covered: int
+    statement_coverage_pct: float
+    branches_total: int
+    branches_covered: int
+    branch_coverage_pct: float
+    files_count: int
+    files: dict[str, CoverageFileDetailRead] = Field(default_factory=dict)
