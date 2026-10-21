@@ -53,3 +53,5 @@ test-results/
 data/
 
 playwright-report/
+artifacts/screencast_frames/
+artifacts/video/*.gif
