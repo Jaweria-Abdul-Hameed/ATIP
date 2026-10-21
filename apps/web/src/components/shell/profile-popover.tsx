@@ -150,27 +150,27 @@ export function ProfilePopover({
             <div className="p-1.5 space-y-0.5">
               <button
                 type="button"
-                onClick={() => handleNavigate("/app/settings")}
-                className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs text-sidebar-text hover:bg-sidebar-active hover:text-white transition-colors text-left"
+                onClick={() => handleNavigate("/app/settings?tab=profile")}
+                className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs text-sidebar-text hover:bg-sidebar-active hover:text-white transition-colors text-left cursor-pointer"
               >
                 <User className="w-3.5 h-3.5 text-sidebar-muted" />
                 <span>Profile Settings</span>
               </button>
               <button
                 type="button"
-                onClick={() => handleNavigate("/app/settings")}
-                className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs text-sidebar-text hover:bg-sidebar-active hover:text-white transition-colors text-left"
+                onClick={() => handleNavigate("/app/settings?tab=members")}
+                className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs text-sidebar-text hover:bg-sidebar-active hover:text-white transition-colors text-left cursor-pointer"
               >
                 <Building className="w-3.5 h-3.5 text-sidebar-muted" />
                 <span>Organization & Members</span>
               </button>
               <button
                 type="button"
-                onClick={() => handleNavigate("/app/settings")}
-                className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs text-sidebar-text hover:bg-sidebar-active hover:text-white transition-colors text-left"
+                onClick={() => handleNavigate("/app/settings?tab=execution")}
+                className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs text-sidebar-text hover:bg-sidebar-active hover:text-white transition-colors text-left cursor-pointer"
               >
                 <Shield className="w-3.5 h-3.5 text-sidebar-muted" />
-                <span>Security Policies</span>
+                <span>Security & Execution Policies</span>
               </button>
             </div>
 
@@ -262,27 +262,27 @@ export function ProfilePopover({
           <div className="p-1.5 space-y-0.5">
             <button
               type="button"
-              onClick={() => handleNavigate("/app/settings")}
-              className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs text-text hover:bg-soft transition-colors text-left"
+              onClick={() => handleNavigate("/app/settings?tab=profile")}
+              className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs text-text hover:bg-soft transition-colors text-left cursor-pointer"
             >
               <User className="w-3.5 h-3.5 text-muted" />
               <span>Profile Settings</span>
             </button>
             <button
               type="button"
-              onClick={() => handleNavigate("/app/settings")}
-              className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs text-text hover:bg-soft transition-colors text-left"
+              onClick={() => handleNavigate("/app/settings?tab=members")}
+              className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs text-text hover:bg-soft transition-colors text-left cursor-pointer"
             >
               <Building className="w-3.5 h-3.5 text-muted" />
-              <span>Organization & Roles</span>
+              <span>Organization & Members</span>
             </button>
             <button
               type="button"
-              onClick={() => handleNavigate("/app/settings")}
-              className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs text-text hover:bg-soft transition-colors text-left"
+              onClick={() => handleNavigate("/app/settings?tab=execution")}
+              className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs text-text hover:bg-soft transition-colors text-left cursor-pointer"
             >
               <Shield className="w-3.5 h-3.5 text-muted" />
-              <span>Execution Policies</span>
+              <span>Security & Execution Policies</span>
             </button>
           </div>
 

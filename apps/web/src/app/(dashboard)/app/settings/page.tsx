@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, Suspense } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { AppShell } from "@/components/shell/app-shell";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Badge } from "@/components/ui/badge";
@@ -15,25 +16,52 @@ import {
   Bell,
   FileText,
   Palette,
-  Check,
-  AlertTriangle,
   Lock,
 } from "lucide-react";
 
-export default function SettingsPage() {
-  const [activeTab, setActiveTab] = useState<
-    | "profile"
-    | "organization"
-    | "members"
-    | "github"
-    | "ai"
-    | "execution"
-    | "notifications"
-    | "audit"
-    | "appearance"
-  >("profile");
+type SettingsTab =
+  | "profile"
+  | "organization"
+  | "members"
+  | "github"
+  | "ai"
+  | "execution"
+  | "notifications"
+  | "audit"
+  | "appearance";
 
+const VALID_TABS: SettingsTab[] = [
+  "profile",
+  "organization",
+  "members",
+  "github",
+  "ai",
+  "execution",
+  "notifications",
+  "audit",
+  "appearance",
+];
+
+function SettingsContent() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const tabParam = searchParams.get("tab") as SettingsTab | null;
+
+  const initialTab =
+    tabParam && VALID_TABS.includes(tabParam) ? tabParam : "profile";
+  const [activeTab, setActiveTab] = useState<SettingsTab>(initialTab);
   const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    if (tabParam && VALID_TABS.includes(tabParam)) {
+      setActiveTab(tabParam);
+    }
+  }, [tabParam]);
+
+  const handleTabChange = (newTab: SettingsTab) => {
+    setActiveTab(newTab);
+    router.replace(`/app/settings?tab=${newTab}`, { scroll: false });
+  };
 
   const handleSave = () => {
     setSaved(true);
@@ -41,15 +69,15 @@ export default function SettingsPage() {
   };
 
   const tabs = [
-    { id: "profile", label: "Profile", icon: User },
-    { id: "organization", label: "Organization", icon: Building },
-    { id: "members", label: "Members & Roles", icon: Users },
-    { id: "github", label: "GitHub App", icon: Github },
-    { id: "ai", label: "AI Providers", icon: Sparkles },
-    { id: "execution", label: "Execution Policies", icon: Shield },
-    { id: "notifications", label: "Notifications", icon: Bell },
-    { id: "audit", label: "Audit Log", icon: FileText },
-    { id: "appearance", label: "Appearance", icon: Palette },
+    { id: "profile" as const, label: "Profile", icon: User },
+    { id: "organization" as const, label: "Organization", icon: Building },
+    { id: "members" as const, label: "Members & Roles", icon: Users },
+    { id: "github" as const, label: "GitHub App", icon: Github },
+    { id: "ai" as const, label: "AI Providers", icon: Sparkles },
+    { id: "execution" as const, label: "Execution Policies", icon: Shield },
+    { id: "notifications" as const, label: "Notifications", icon: Bell },
+    { id: "audit" as const, label: "Audit Log", icon: FileText },
+    { id: "appearance" as const, label: "Appearance", icon: Palette },
   ];
 
   return (
@@ -72,7 +100,7 @@ export default function SettingsPage() {
           return (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
+              onClick={() => handleTabChange(tab.id)}
               className={`pb-3 -mb-px transition-colors flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
                 activeTab === tab.id
                   ? "text-text font-semibold border-b-2 border-text"
@@ -157,7 +185,7 @@ export default function SettingsPage() {
               <h2 className="text-sm font-semibold text-text">
                 Workspace Members (1)
               </h2>
-              <button className="px-3 py-1.5 rounded-lg border border-border text-xs font-medium text-text hover:bg-soft">
+              <button className="px-3 py-1.5 rounded-lg border border-border text-xs font-medium text-text hover:bg-soft cursor-pointer">
                 + Invite Member
               </button>
             </div>
@@ -242,15 +270,23 @@ export default function SettingsPage() {
         {activeTab === "execution" && (
           <div className="rounded-xl border border-border bg-surface p-6 shadow-sm space-y-4 text-xs">
             <h2 className="text-sm font-semibold text-text">
-              Sandbox Execution Policies
+              Sandbox Execution & Security Policies
             </h2>
-            <div className="p-3 rounded-lg border border-border bg-soft space-y-2">
-              <div className="font-semibold text-text">Security Guarantee</div>
-              <p className="text-muted">
-                Untrusted repository code never runs on the control plane. Tests
-                execute only in hardened ephemeral isolation with default-deny network
-                access.
+            <div className="p-4 rounded-lg border border-border bg-soft space-y-3">
+              <div className="font-semibold text-text flex items-center gap-2">
+                <Shield className="w-4 h-4 text-emerald-500" />
+                <span>Hardened Ephemeral Runner</span>
+              </div>
+              <p className="text-muted leading-relaxed">
+                Untrusted repository code never runs on the control plane or web host.
+                Tests execute exclusively in hardened, ephemeral Docker/gVisor sandboxes
+                with default-deny network access and strict CPU/memory quotas.
               </p>
+              <div className="pt-2 flex items-center gap-2">
+                <Badge variant="neutral">Default-Deny Egress</Badge>
+                <Badge variant="neutral">2.0 CPU / 2048 MB Limit</Badge>
+                <Badge variant="neutral">Read-Only Root FS</Badge>
+              </div>
             </div>
           </div>
         )}
@@ -307,5 +343,23 @@ export default function SettingsPage() {
         )}
       </div>
     </AppShell>
+  );
+}
+
+export default function SettingsPage() {
+  return (
+    <Suspense
+      fallback={
+        <AppShell breadcrumbs={["Settings"]}>
+          <div className="pt-2 pb-6 border-b border-border">
+            <h1 className="font-serif text-3xl sm:text-4xl font-normal tracking-tight text-text">
+              Settings
+            </h1>
+          </div>
+        </AppShell>
+      }
+    >
+      <SettingsContent />
+    </Suspense>
   );
 }
