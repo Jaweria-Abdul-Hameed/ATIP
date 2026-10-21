@@ -140,3 +140,25 @@ export interface AIAnalysisInvestigation {
     citations?: string[];
   }[];
 }
+
+export interface DailyTrendPoint {
+  day: string;
+  date: string;
+  passRate: number;
+  coverage: number;
+  runsCount: number;
+  passedCount: number;
+  failedCount: number;
+  durationSeconds: number;
+}
+
+export interface HistoricalReport {
+  id: string;
+  title: string;
+  repo: string;
+  date: string;
+  coverage: string;
+  runs: number;
+  status: "Available" | "Archived";
+  downloadFileName: string;
+}
