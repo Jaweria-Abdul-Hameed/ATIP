@@ -332,3 +332,232 @@ class SafeGitFetcher:
             )
 
         return stdout_bytes
+
+    async def list_commits(
+        self,
+        repo_path: str | Path,
+        max_count: int = 100,
+        branch: str = "HEAD",
+    ) -> list[CommitMetadata]:
+        """List historical commits from branch/ref without checking out files."""
+        clean_branch = branch.strip()
+        if not REF_RE.match(clean_branch) or clean_branch.startswith("-"):
+            raise GitSecurityError(f"Invalid branch/ref: {branch}")
+
+        fmt = "%H%x00%T%x00%P%x00%an%x00%ae%x00%cn%x00%ce%x00%cI%x00%s%x00%B%x01"
+        code, stdout, stderr = await self.run_git(
+            ["log", f"-n{max_count}", f"--format={fmt}", clean_branch],
+            cwd=repo_path,
+        )
+        if code != 0:
+            raise GitExecutionError(f"Failed to list commits for {branch}: {stderr.strip()}")
+
+        commits: list[CommitMetadata] = []
+        raw_commits = stdout.split("\x01")
+        for raw in raw_commits:
+            raw = raw.strip()
+            if not raw:
+                continue
+            parts = raw.split("\x00")
+            if len(parts) < 10:
+                continue
+            sha = parts[0].strip()
+            if not SHA_RE.match(sha):
+                continue
+            tree_sha = parts[1].strip()
+            parents_raw = parts[2].strip()
+            parent_shas = [p for p in parents_raw.split() if p] if parents_raw else []
+            author_name = parts[3].strip()
+            author_email = parts[4].strip()
+            committer_name = parts[5].strip()
+            committer_email = parts[6].strip()
+            committed_at_str = parts[7].strip()
+            summary = parts[8].strip()
+            message = parts[9].strip() if len(parts) > 9 else summary
+
+            try:
+                committed_at = datetime.fromisoformat(committed_at_str)
+            except Exception:
+                committed_at = datetime.now(UTC)
+
+            commits.append(
+                CommitMetadata(
+                    commit_sha=sha,
+                    tree_sha=tree_sha,
+                    parent_shas=parent_shas,
+                    author_name=author_name,
+                    author_email=author_email,
+                    committer_name=committer_name,
+                    committer_email=committer_email,
+                    committed_at=committed_at,
+                    message=message,
+                    summary=summary,
+                )
+            )
+
+        return commits
+
+    async def get_commit_file_changes(
+        self,
+        repo_path: str | Path,
+        commit_sha: str,
+        include_patch: bool = False,
+        max_patch_bytes: int = 50000,
+    ) -> list[dict[str, Any]]:
+        """Extract file changes (added/modified/deleted/renamed, insertions, deletions) for commit."""
+        if not SHA_RE.match(commit_sha):
+            raise GitSecurityError(f"Invalid commit SHA: {commit_sha}")
+
+        # 1. Get name-status to distinguish Added, Modified, Deleted, Renamed
+        code, status_out, stderr = await self.run_git(
+            ["diff-tree", "--no-commit-id", "-r", "--name-status", "--root", "-M", commit_sha],
+            cwd=repo_path,
+        )
+        if code != 0:
+            raise GitExecutionError(f"Failed to get name-status for {commit_sha}: {stderr.strip()}")
+
+        status_map: dict[str, tuple[str, str | None]] = {}
+        for line in status_out.splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            parts = line.split("\t")
+            code_letter = parts[0][0] if parts[0] else "M"
+            if code_letter == "A":
+                status_map[parts[1]] = ("added", None)
+            elif code_letter == "D":
+                status_map[parts[1]] = ("deleted", None)
+            elif code_letter == "R":
+                old_path = parts[1]
+                new_path = parts[2] if len(parts) > 2 else parts[1]
+                status_map[new_path] = ("renamed", old_path)
+            else:
+                status_map[parts[1]] = ("modified", None)
+
+        # 2. Get numstat for insertions and deletions
+        code, numstat_out, stderr = await self.run_git(
+            ["diff-tree", "--no-commit-id", "-r", "--numstat", "--root", "-M", commit_sha],
+            cwd=repo_path,
+        )
+        if code != 0:
+            raise GitExecutionError(f"Failed to get numstat for {commit_sha}: {stderr.strip()}")
+
+        changes: list[dict[str, Any]] = []
+        for line in numstat_out.splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            parts = line.split("\t")
+            if len(parts) < 3:
+                continue
+            ins_str, del_str, file_col = parts[0], parts[1], parts[2]
+            try:
+                insertions = int(ins_str) if ins_str != "-" else 0
+                deletions = int(del_str) if del_str != "-" else 0
+            except ValueError:
+                insertions, deletions = 0, 0
+
+            file_path = file_col
+            old_path = None
+            change_type = "modified"
+
+            if file_col in status_map:
+                change_type, old_path = status_map[file_col]
+                file_path = file_col
+            elif " => " in file_col:
+                # Git rename notation: '{old => new}' or 'old => new' or 'path/{old => new}'
+                for mapped_path, (ct, prev) in status_map.items():
+                    if ct == "renamed" and (
+                        file_col.endswith(mapped_path) or mapped_path in file_col
+                    ):
+                        change_type = ct
+                        old_path = prev
+                        file_path = mapped_path
+                        break
+            else:
+                for mapped_path, (ct, prev) in status_map.items():
+                    if mapped_path == file_path or file_path.endswith("/" + mapped_path):
+                        change_type = ct
+                        old_path = prev
+                        file_path = mapped_path
+                        break
+
+            is_test = is_test_file(file_path)
+            lang = detect_language(file_path)
+
+            changes.append(
+                {
+                    "file_path": file_path,
+                    "previous_path": old_path,
+                    "change_type": change_type,
+                    "insertions": insertions,
+                    "deletions": deletions,
+                    "is_test": is_test,
+                    "language": lang,
+                    "patch": None,
+                }
+            )
+
+        # 3. Optional patch extraction
+        if include_patch and changes:
+            code, patch_out, _ = await self.run_git(
+                ["diff-tree", "--no-commit-id", "-r", "-p", "--root", "-M", commit_sha],
+                cwd=repo_path,
+            )
+            if code == 0 and patch_out:
+                if len(patch_out.encode("utf-8")) > max_patch_bytes:
+                    patch_out = patch_out[:max_patch_bytes] + "\n... [diff truncated]"
+                changes[0]["patch"] = patch_out
+
+        return changes
+
+
+def is_test_file(path: str) -> bool:
+    """Classify whether a file path corresponds to a test file."""
+    norm = path.replace("\\", "/").lower()
+    filename = norm.split("/")[-1]
+    parts = norm.split("/")
+    if any(p in {"tests", "test", "__tests__", "spec", "specs"} for p in parts[:-1]):
+        return True
+    if filename.startswith("test_") or filename.endswith("_test.py") or filename == "conftest.py":
+        return True
+    return any(
+        filename.endswith(ext)
+        for ext in [
+            ".test.ts",
+            ".spec.ts",
+            ".test.tsx",
+            ".spec.tsx",
+            ".test.js",
+            ".spec.js",
+            ".test.jsx",
+            ".spec.jsx",
+        ]
+    )
+
+
+def detect_language(path: str) -> str | None:
+    """Detect programming or markup language from file path."""
+    ext = Path(path).suffix.lower()
+    mapping = {
+        ".py": "Python",
+        ".pyw": "Python",
+        ".ts": "TypeScript",
+        ".tsx": "TypeScript",
+        ".js": "JavaScript",
+        ".jsx": "JavaScript",
+        ".mjs": "JavaScript",
+        ".cjs": "JavaScript",
+        ".json": "JSON",
+        ".md": "Markdown",
+        ".yaml": "YAML",
+        ".yml": "YAML",
+        ".toml": "TOML",
+        ".html": "HTML",
+        ".css": "CSS",
+        ".scss": "CSS",
+        ".sql": "SQL",
+        ".sh": "Shell",
+        ".bash": "Shell",
+    }
+    return mapping.get(ext)

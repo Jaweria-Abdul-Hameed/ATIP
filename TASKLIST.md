@@ -60,7 +60,7 @@
 ## M3 — repository mining and analysis
 
 - [x] **M3-01** Create immutable commit-specific repository snapshots and safe repository fetch without executing repo scripts.
-- [ ] **M3-02** Extract commits, diffs, file changes, ownership and change-frequency evidence.
+- [x] **M3-02** Extract commits, diffs, file changes, ownership and change-frequency evidence.
 - [ ] **M3-03** Implement Python + JS/TS import/dependency graph with parser fallback and provenance.
 - [ ] **M3-04** Compute basic complexity/static-analysis features; discover tests and ingest available coverage.
 - [ ] **M3-05** Implement analysis jobs, progress events, idempotency/retries and persisted results.

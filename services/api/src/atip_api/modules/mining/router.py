@@ -14,12 +14,19 @@ from atip_api.core.errors import BadRequestError, ForbiddenError, NotFoundError
 from atip_api.core.pagination import PaginationMetadata
 from atip_api.core.responses import DataResponse, PaginatedResponse, ResponseMeta
 from atip_api.core.sse import ServerSentEvent, sse_event_stream
+from atip_api.db.models.mining import CommitRecord, FileChangeRecord
 from atip_api.db.models.organization import OrganizationMembership, User
 from atip_api.db.models.repository import Repository, RepositorySnapshot
 from atip_api.db.session import get_db
 from atip_api.modules.identity.deps import get_current_active_user
 from atip_api.modules.mining.git_fetcher import GitExecutionError, GitSecurityError, SafeGitFetcher
+from atip_api.modules.mining.history_miner import HistoryMiner
 from atip_api.modules.mining.schemas import (
+    CommitDetailRead,
+    CommitRead,
+    FileChangeRead,
+    HotspotRead,
+    MineHistoryRequest,
     SnapshotCreateRequest,
     SnapshotFileContent,
     SnapshotRead,
@@ -295,6 +302,251 @@ async def get_snapshot_file(
             content=text_content,
             is_binary=is_binary,
         )
+    )
+
+
+@router.post(
+    "/repositories/{id}/mine-history",
+    response_model=DataResponse[list[CommitRead]],
+    status_code=status.HTTP_200_OK,
+)
+async def mine_repository_history(
+    id: str,
+    payload: MineHistoryRequest,
+    request: Request,
+    current_user: User = Depends(get_current_active_user),
+    session: AsyncSession = Depends(get_db),
+) -> DataResponse[list[CommitRead]]:
+    """Mine commit history, file diffs, and change statistics without checkout."""
+    org_id = _extract_org_id(request, current_user)
+    repo = await _verify_repo_access(session, id, org_id, current_user.id)
+
+    miner = HistoryMiner()
+    try:
+        commits = await miner.mine_repository_history(
+            session=session,
+            org_id=org_id,
+            repository=repo,
+            branch=payload.branch,
+            max_commits=payload.max_commits,
+            include_patch=True,
+        )
+    except GitSecurityError as e:
+        raise BadRequestError(f"Security restriction violated: {e}") from e
+    except GitExecutionError as e:
+        raise BadRequestError(f"Mining failed: {e}") from e
+
+    return DataResponse(
+        data=[
+            CommitRead(
+                id=c.id,
+                repository_id=c.repository_id,
+                organization_id=c.organization_id,
+                commit_sha=c.commit_sha,
+                tree_sha=c.tree_sha,
+                parent_shas=c.parent_shas,
+                author_name=c.author_name,
+                author_email=c.author_email,
+                committer_name=c.committer_name,
+                committer_email=c.committer_email,
+                committed_at=c.committed_at.isoformat() if c.committed_at else None,
+                summary=c.summary,
+                message=c.message,
+                insertions=c.insertions,
+                deletions=c.deletions,
+                files_changed_count=c.files_changed_count,
+                created_at=c.created_at.isoformat(),
+            )
+            for c in commits
+        ]
+    )
+
+
+@router.get(
+    "/repositories/{id}/commits",
+    response_model=PaginatedResponse[CommitRead],
+)
+async def list_commits(
+    id: str,
+    request: Request,
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
+    current_user: User = Depends(get_current_active_user),
+    session: AsyncSession = Depends(get_db),
+) -> PaginatedResponse[CommitRead]:
+    """List mined repository commits with pagination."""
+    org_id = _extract_org_id(request, current_user)
+    await _verify_repo_access(session, id, org_id, current_user.id)
+
+    count_stmt = select(func.count(CommitRecord.id)).where(
+        CommitRecord.repository_id == id,
+        CommitRecord.organization_id == org_id,
+    )
+    total_count = (await session.execute(count_stmt)).scalar() or 0
+
+    stmt = (
+        select(CommitRecord)
+        .where(
+            CommitRecord.repository_id == id,
+            CommitRecord.organization_id == org_id,
+        )
+        .order_by(CommitRecord.committed_at.desc())
+        .offset((page - 1) * page_size)
+        .limit(page_size)
+    )
+    items = (await session.execute(stmt)).scalars().all()
+
+    return PaginatedResponse(
+        data=[
+            CommitRead(
+                id=c.id,
+                repository_id=c.repository_id,
+                organization_id=c.organization_id,
+                commit_sha=c.commit_sha,
+                tree_sha=c.tree_sha,
+                parent_shas=c.parent_shas,
+                author_name=c.author_name,
+                author_email=c.author_email,
+                committer_name=c.committer_name,
+                committer_email=c.committer_email,
+                committed_at=c.committed_at.isoformat() if c.committed_at else None,
+                summary=c.summary,
+                message=c.message,
+                insertions=c.insertions,
+                deletions=c.deletions,
+                files_changed_count=c.files_changed_count,
+                created_at=c.created_at.isoformat(),
+            )
+            for c in items
+        ],
+        pagination=PaginationMetadata.create(
+            page=page,
+            page_size=page_size,
+            total_items=total_count,
+        ),
+        meta=ResponseMeta(),
+    )
+
+
+@router.get(
+    "/repositories/{id}/commits/{commit_sha}",
+    response_model=DataResponse[CommitDetailRead],
+)
+async def get_commit_detail(
+    id: str,
+    commit_sha: str,
+    request: Request,
+    current_user: User = Depends(get_current_active_user),
+    session: AsyncSession = Depends(get_db),
+) -> DataResponse[CommitDetailRead]:
+    """Get commit details including file changes and modifications."""
+    org_id = _extract_org_id(request, current_user)
+    await _verify_repo_access(session, id, org_id, current_user.id)
+
+    stmt = select(CommitRecord).where(
+        CommitRecord.repository_id == id,
+        CommitRecord.organization_id == org_id,
+        (CommitRecord.commit_sha == commit_sha) | (CommitRecord.id == commit_sha),
+    )
+    commit_rec = (await session.execute(stmt)).scalar_one_or_none()
+    if not commit_rec:
+        raise NotFoundError("Commit not found")
+
+    fc_stmt = (
+        select(FileChangeRecord)
+        .where(
+            FileChangeRecord.repository_id == id,
+            FileChangeRecord.organization_id == org_id,
+            FileChangeRecord.commit_sha == commit_rec.commit_sha,
+        )
+        .order_by(FileChangeRecord.file_path.asc())
+    )
+    file_changes = (await session.execute(fc_stmt)).scalars().all()
+
+    return DataResponse(
+        data=CommitDetailRead(
+            commit=CommitRead(
+                id=commit_rec.id,
+                repository_id=commit_rec.repository_id,
+                organization_id=commit_rec.organization_id,
+                commit_sha=commit_rec.commit_sha,
+                tree_sha=commit_rec.tree_sha,
+                parent_shas=commit_rec.parent_shas,
+                author_name=commit_rec.author_name,
+                author_email=commit_rec.author_email,
+                committer_name=commit_rec.committer_name,
+                committer_email=commit_rec.committer_email,
+                committed_at=commit_rec.committed_at.isoformat()
+                if commit_rec.committed_at
+                else None,
+                summary=commit_rec.summary,
+                message=commit_rec.message,
+                insertions=commit_rec.insertions,
+                deletions=commit_rec.deletions,
+                files_changed_count=commit_rec.files_changed_count,
+                created_at=commit_rec.created_at.isoformat(),
+            ),
+            file_changes=[
+                FileChangeRead(
+                    id=fc.id,
+                    commit_sha=fc.commit_sha,
+                    file_path=fc.file_path,
+                    previous_path=fc.previous_path,
+                    change_type=fc.change_type,
+                    insertions=fc.insertions,
+                    deletions=fc.deletions,
+                    is_test=fc.is_test,
+                    language=fc.language,
+                    patch=fc.patch,
+                )
+                for fc in file_changes
+            ],
+        )
+    )
+
+
+@router.get(
+    "/repositories/{id}/hotspots",
+    response_model=DataResponse[list[HotspotRead]],
+)
+async def get_repository_hotspots(
+    id: str,
+    request: Request,
+    min_changes: int = Query(default=1, ge=1),
+    current_user: User = Depends(get_current_active_user),
+    session: AsyncSession = Depends(get_db),
+) -> DataResponse[list[HotspotRead]]:
+    """Get file churn, ownership, and risk hotspot ranking."""
+    org_id = _extract_org_id(request, current_user)
+    await _verify_repo_access(session, id, org_id, current_user.id)
+
+    miner = HistoryMiner()
+    hotspots = await miner.compute_hotspots_and_ownership(
+        session=session,
+        org_id=org_id,
+        repository_id=id,
+        min_changes=min_changes,
+    )
+
+    return DataResponse(
+        data=[
+            HotspotRead(
+                file_path=h["file_path"],
+                change_count=h["change_count"],
+                total_insertions=h["total_insertions"],
+                total_deletions=h["total_deletions"],
+                total_churn=h["total_churn"],
+                distinct_authors_count=h["distinct_authors_count"],
+                primary_owner=h["primary_owner"],
+                ownership_pct=h["ownership_pct"],
+                authors=h["authors"],
+                is_test=h["is_test"],
+                language=h["language"],
+                hotspot_score=h["hotspot_score"],
+                last_modified=h["last_modified"],
+            )
+            for h in hotspots
+        ]
     )
 
 
