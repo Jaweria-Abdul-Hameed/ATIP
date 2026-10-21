@@ -101,9 +101,7 @@ class OrganizationMembership(Base, TimestampMixin):
     organization: Mapped["Organization"] = relationship(
         "Organization", back_populates="memberships", lazy="selectin"
     )
-    user: Mapped["User"] = relationship(
-        "User", back_populates="memberships", lazy="selectin"
-    )
+    user: Mapped["User"] = relationship("User", back_populates="memberships", lazy="selectin")
 
     __table_args__ = (
         UniqueConstraint("organization_id", "user_id", name="uq_org_user_membership"),
