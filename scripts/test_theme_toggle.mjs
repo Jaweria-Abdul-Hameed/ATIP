@@ -18,9 +18,11 @@ async function main() {
   await new Promise((res) => setTimeout(res, 500));
 
   // Find theme toggle button
-  const toggleBtn = await page.$('button[aria-label="Toggle light or dark theme"]');
+  const toggleBtn = await page.$(
+    'header button[aria-label*="mode" i], header button[aria-label*="theme" i]'
+  );
   if (!toggleBtn) {
-    throw new Error("Theme toggle button not found");
+    throw new Error("Theme toggle button not found in header");
   }
 
   // Click once to switch to dark

@@ -2,6 +2,7 @@
 
 import React from "react";
 import { Search, Menu } from "lucide-react";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { NotificationsPopover } from "@/components/shell/notifications-popover";
 
 interface TopbarProps {
@@ -33,6 +34,7 @@ export function Topbar({ onOpenMobileMenu, searchPlaceholder }: TopbarProps) {
       </div>
 
       <div className="flex items-center gap-2">
+        <ThemeToggle />
         <NotificationsPopover />
       </div>
     </header>
