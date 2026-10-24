@@ -3,7 +3,7 @@
 **State:** SETUP, M0, M1, M2, M3, M4 COMPLETED (All tasks M4-01 through M4-14 verified).
 **Next action:** Phase M5 Task M5-01: Implement Python and JS/TS AST/CFG parser adapters with source spans, language version, diagnostics, bounded parsing and test fixture repositories.
 **Active phase:** Phase M5 — white-box static analysis and objective discovery (to be started in a new conversation).
-**Last verified commit:** Ready to commit Phase M4 completion.
+**Last verified commit:** `b327e99` (Phase M4 completion verified and pushed).
 **Current blockers:** None. No human intervention required.
 
 ## Progress log (append verified work only)
