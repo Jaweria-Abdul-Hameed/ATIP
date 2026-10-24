@@ -198,6 +198,10 @@ export const api = {
     return apiClient.connectRepository(repo);
   },
 
+  connectPublicRepository: async (payload: { url: string; branch?: string }) => {
+    return apiClient.connectPublicRepository(payload);
+  },
+
   loginWithGitHubToken: async (token: string) => {
     return apiClient.loginWithGitHubToken(token);
   },

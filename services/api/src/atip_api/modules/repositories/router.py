@@ -1,13 +1,15 @@
 """Repository management, discovery, sync, branches, and PR selectors router."""
 
+import re
 import uuid
 from datetime import UTC, datetime
 
+import httpx
 from fastapi import APIRouter, Depends, Query, Request, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from atip_api.core.errors import ConflictError, NotFoundError
+from atip_api.core.errors import BadRequestError, ConflictError, NotFoundError
 from atip_api.core.pagination import PaginationMetadata, PaginationParams, get_pagination_params
 from atip_api.core.responses import DataResponse, PaginatedResponse
 from atip_api.db.models import ExecutionJob, JobStatus, JobType, Repository
@@ -18,6 +20,7 @@ from atip_api.modules.organizations.deps import OrgContext, get_org_context, req
 from atip_api.modules.repositories.schemas import (
     BranchSummary,
     PullRequestSummary,
+    RepositoryConnectPublicUrlRequest,
     RepositoryConnectRequest,
     RepositoryDiscoverItem,
     RepositoryRead,
@@ -152,6 +155,104 @@ async def connect_repository(
     await db.flush()
 
     # Create initial REPO_MINING execution job
+    job = ExecutionJob(
+        organization_id=context.organization.id,
+        repository_id=repo.id,
+        job_type=JobType.REPO_MINING,
+        status=JobStatus.QUEUED,
+        progress_pct=0,
+        current_step="Initial repository discovery and snapshot indexing queued",
+    )
+    db.add(job)
+    await db.commit()
+    await db.refresh(repo)
+
+    return DataResponse(
+        data=RepositoryRead(
+            id=repo.id,
+            organization_id=repo.organization_id,
+            name=repo.name,
+            full_name=repo.full_name,
+            default_branch=repo.default_branch,
+            is_private=repo.is_private,
+            clone_url=repo.clone_url,
+            language=repo.language,
+            last_synced_at=repo.last_synced_at,
+            created_at=repo.created_at,
+        )
+    )
+
+
+@router.post(
+    "/connect-public-url",
+    response_model=DataResponse[RepositoryRead],
+    status_code=status.HTTP_201_CREATED,
+)
+async def connect_public_repository(
+    payload: RepositoryConnectPublicUrlRequest,
+    context: OrgContext = Depends(require_org_role(MembershipRole.DEVELOPER)),
+    db: AsyncSession = Depends(get_db),
+) -> DataResponse[RepositoryRead]:
+    """Connect any public GitHub repository by URL without requiring account access tokens."""
+    raw_url = payload.url.strip()
+    clean_url = raw_url.removesuffix("/").removesuffix(".git")
+
+    # Match https://github.com/owner/repo or github.com/owner/repo or owner/repo
+    pattern = r"(?:https?://github\.com/|^github\.com/|^)([a-zA-Z0-9_.-]+)/([a-zA-Z0-9_.-]+)"
+    match = re.search(pattern, clean_url)
+    if not match:
+        raise BadRequestError(
+            message=f"Invalid GitHub repository URL '{payload.url}'. Expected format: https://github.com/owner/repository"
+        )
+
+    owner, repo_name = match.group(1), match.group(2)
+    full_name = f"{owner}/{repo_name}"
+    clone_url = f"https://github.com/{full_name}.git"
+
+    # Check if already connected in this organization
+    check_stmt = select(Repository).where(
+        Repository.organization_id == context.organization.id,
+        Repository.full_name.ilike(full_name),
+    )
+    if (await db.execute(check_stmt)).scalar_one_or_none():
+        raise ConflictError(message=f"Repository '{full_name}' is already connected.")
+
+    github_repo_id = abs(hash(full_name)) % 1000000000
+    default_branch = payload.branch or "main"
+    language = "Python"
+
+    # Probe public metadata from GitHub API if available
+    try:
+        async with httpx.AsyncClient(timeout=4.0) as client:
+            resp = await client.get(
+                f"https://api.github.com/repos/{owner}/{repo_name}",
+                headers={"User-Agent": "ATIP-Autonomous-Platform"},
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                github_repo_id = data.get("id", github_repo_id)
+                if not payload.branch:
+                    default_branch = data.get("default_branch", "main")
+                language = data.get("language") or "Python"
+    except Exception:
+        pass
+
+    now_iso = datetime.now(UTC).isoformat()
+    repo = Repository(
+        organization_id=context.organization.id,
+        github_installation_id=None,
+        github_repo_id=github_repo_id,
+        name=repo_name,
+        full_name=full_name,
+        default_branch=default_branch,
+        is_private=False,
+        clone_url=clone_url,
+        language=language,
+        last_synced_at=now_iso,
+    )
+    db.add(repo)
+    await db.flush()
+
     job = ExecutionJob(
         organization_id=context.organization.id,
         repository_id=repo.id,

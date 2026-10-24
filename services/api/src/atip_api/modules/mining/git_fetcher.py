@@ -141,6 +141,10 @@ class SafeGitFetcher:
                 args.extend(["--branch", branch])
             args.extend([auth_url, str(target)])
             code, stdout, stderr = await self.run_git(args, timeout=120)
+            if code != 0 and branch:
+                # Retry without explicit branch flag in case remote default branch is master/trunk/etc.
+                args = ["clone", "--depth", "50", auth_url, str(target)]
+                code, stdout, stderr = await self.run_git(args, timeout=120)
             if code != 0:
                 raise GitExecutionError(f"Failed to clone repository: {stderr.strip()}")
         else:

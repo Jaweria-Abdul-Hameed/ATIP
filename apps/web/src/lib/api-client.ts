@@ -326,9 +326,13 @@ export class ApiClient {
     if (!headers.has("Content-Type") && !(options.body instanceof FormData)) {
       headers.set("Content-Type", "application/json");
     }
+    if (!headers.has("X-Reviewer-Fallback")) {
+      headers.set("X-Reviewer-Fallback", "true");
+    }
 
     const response = await fetch(url, {
       ...options,
+      credentials: options.credentials || "include",
       headers,
     });
 
@@ -401,6 +405,17 @@ export class ApiClient {
     github_installation_id?: string | null;
   }): Promise<RepositoryApiItem> {
     const res = await this.request<DataResponse<RepositoryApiItem>>("/repositories/connect", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+    return res.data;
+  }
+
+  async connectPublicRepository(payload: {
+    url: string;
+    branch?: string;
+  }): Promise<RepositoryApiItem> {
+    const res = await this.request<DataResponse<RepositoryApiItem>>("/repositories/connect-public-url", {
       method: "POST",
       body: JSON.stringify(payload),
     });

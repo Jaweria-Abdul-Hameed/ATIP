@@ -136,7 +136,11 @@ class SnapshotManager:
         local_repo_path: str | Path | None = None,
     ) -> Path:
         """Resolve a usable working directory: local path, existing clone, or remote clone."""
-        if local_repo_path and (Path(local_repo_path) / ".git").exists():
+        if (
+            local_repo_path
+            and local_repo_path != "."
+            and (Path(local_repo_path) / ".git").exists()
+        ):
             return Path(local_repo_path).resolve()
 
         # If repository has a remote clone_url, clone or fetch into dedicated directory

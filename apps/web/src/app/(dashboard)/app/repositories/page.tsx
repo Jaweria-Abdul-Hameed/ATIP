@@ -52,6 +52,38 @@ export default function RepositoriesPage() {
   const [modalVisibilityFilter, setModalVisibilityFilter] = useState<"all" | "private" | "public">("all");
   const [installationId, setInstallationId] = useState<string | null>(null);
 
+  // Connect by public URL state
+  const [connectTab, setConnectTab] = useState<"publicUrl" | "githubAuth">("publicUrl");
+  const [publicRepoUrl, setPublicRepoUrl] = useState("");
+  const [publicRepoBranch, setPublicRepoBranch] = useState("");
+  const [isConnectingPublic, setIsConnectingPublic] = useState(false);
+  const [publicUrlError, setPublicUrlError] = useState<string | null>(null);
+
+  const handleConnectPublicUrl = async (presetUrl?: string) => {
+    const urlToUse = presetUrl || publicRepoUrl;
+    if (!urlToUse.trim()) {
+      setPublicUrlError("Please enter a valid GitHub repository URL.");
+      return;
+    }
+    setIsConnectingPublic(true);
+    setPublicUrlError(null);
+    try {
+      await api.connectPublicRepository({
+        url: urlToUse.trim(),
+        branch: publicRepoBranch.trim() || undefined,
+      });
+      const updated = await api.getRepositories({ forceLive: true });
+      setRepositories(updated);
+      setShowConnectModal(false);
+      setPublicRepoUrl("");
+      setPublicRepoBranch("");
+    } catch (err: any) {
+      setPublicUrlError(err?.message || "Failed to connect repository. Please verify the URL.");
+    } finally {
+      setIsConnectingPublic(false);
+    }
+  };
+
   const fetchDiscovered = async () => {
     setIsDiscovering(true);
     try {
@@ -400,9 +432,133 @@ export default function RepositoriesPage() {
               </button>
             </div>
 
+            {/* Modal Tabs: Public Repo URL vs GitHub PAT */}
+            <div className="flex border-b border-border text-xs mt-3">
+              <button
+                type="button"
+                onClick={() => setConnectTab("publicUrl")}
+                className={`pb-2.5 px-3 border-b-2 font-medium transition-colors flex items-center gap-1.5 cursor-pointer ${
+                  connectTab === "publicUrl"
+                    ? "border-text text-text"
+                    : "border-transparent text-muted hover:text-text"
+                }`}
+              >
+                <Globe className="w-3.5 h-3.5" />
+                <span>Public Repository URL</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setConnectTab("githubAuth")}
+                className={`pb-2.5 px-3 border-b-2 font-medium transition-colors flex items-center gap-1.5 cursor-pointer ${
+                  connectTab === "githubAuth"
+                    ? "border-text text-text"
+                    : "border-transparent text-muted hover:text-text"
+                }`}
+              >
+                <Key className="w-3.5 h-3.5" />
+                <span>GitHub Account & PAT</span>
+              </button>
+            </div>
+
             <div className="py-4 space-y-4 overflow-y-auto flex-1 pr-1">
-              {!gitHubUser ? (
-                /* Step 1: Authenticate with GitHub Token */
+              {connectTab === "publicUrl" ? (
+                /* Tab 1: Connect by Public Repository URL */
+                <div className="space-y-4">
+                  <div className="p-3.5 rounded-lg border border-border bg-soft space-y-1.5">
+                    <div className="flex items-center gap-2 text-xs font-semibold text-text">
+                      <Globe className="w-3.5 h-3.5" />
+                      <span>Connect Any Public GitHub Repository</span>
+                    </div>
+                    <p className="text-xs text-muted leading-relaxed">
+                      Paste any public open source GitHub URL without requiring authentication or personal access tokens. ATIP will safely clone the repository snapshot, extract commit churn, build AST dependency graphs, and compute complexity metrics.
+                    </p>
+                  </div>
+
+                  {publicUrlError && (
+                    <div className="flex items-start gap-2 p-3 rounded-lg border border-red-500/30 bg-red-500/10 text-xs text-red-600 dark:text-red-400">
+                      <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                      <span>{publicUrlError}</span>
+                    </div>
+                  )}
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-text">
+                      GitHub Repository URL
+                    </label>
+                    <input
+                      type="text"
+                      value={publicRepoUrl}
+                      onChange={(e) => setPublicRepoUrl(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && handleConnectPublicUrl()}
+                      placeholder="https://github.com/pallets/flask or https://github.com/owner/repo"
+                      className="w-full px-3 py-2 text-xs font-mono rounded-lg border border-border bg-surface text-text placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-text"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-text">
+                      Branch (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      value={publicRepoBranch}
+                      onChange={(e) => setPublicRepoBranch(e.target.value)}
+                      placeholder="main (leave blank for repository default branch)"
+                      className="w-full px-3 py-2 text-xs font-mono rounded-lg border border-border bg-surface text-text placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-text"
+                    />
+                  </div>
+
+                  {/* Quick Presets */}
+                  <div className="space-y-1.5 pt-1">
+                    <span className="text-[11px] font-medium text-muted">
+                      Or choose a sample public repository:
+                    </span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {[
+                        { label: "pallets/flask", url: "https://github.com/pallets/flask", lang: "Python" },
+                        { label: "psf/requests", url: "https://github.com/psf/requests", lang: "Python" },
+                        { label: "expressjs/express", url: "https://github.com/expressjs/express", lang: "JavaScript" },
+                        { label: "fastify/fastify", url: "https://github.com/fastify/fastify", lang: "TypeScript" },
+                      ].map((preset) => (
+                        <button
+                          key={preset.url}
+                          type="button"
+                          onClick={() => {
+                            setPublicRepoUrl(preset.url);
+                            handleConnectPublicUrl(preset.url);
+                          }}
+                          disabled={isConnectingPublic}
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-border bg-surface hover:bg-soft text-xs text-text transition-colors cursor-pointer disabled:opacity-50"
+                        >
+                          <span className="font-mono text-[11px]">{preset.label}</span>
+                          <span className="text-[10px] text-muted">({preset.lang})</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="pt-2">
+                    <button
+                      onClick={() => handleConnectPublicUrl()}
+                      disabled={isConnectingPublic || !publicRepoUrl.trim()}
+                      className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-text text-surface text-xs font-medium hover:opacity-90 transition-opacity disabled:opacity-50 cursor-pointer"
+                    >
+                      {isConnectingPublic ? (
+                        <>
+                          <RotateCw className="w-3.5 h-3.5 animate-spin" />
+                          <span>Connecting & Indexing Repository...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Check className="w-3.5 h-3.5" />
+                          <span>Connect & Index Repository</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              ) : !gitHubUser ? (
+                /* Tab 2 Step 1: Authenticate with GitHub Token */
                 <div className="space-y-4">
                   <div className="p-3.5 rounded-lg border border-border bg-soft space-y-2">
                     <div className="flex items-center gap-2 text-xs font-semibold text-text">
@@ -480,7 +636,7 @@ export default function RepositoriesPage() {
                   </div>
                 </div>
               ) : (
-                /* Step 2: Authenticated View & Repository Selector */
+                /* Tab 2 Step 2: Authenticated View & Repository Selector */
                 <div className="space-y-4">
                   {/* User Profile Banner */}
                   <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-soft">
@@ -635,7 +791,11 @@ export default function RepositoriesPage() {
 
             <div className="flex justify-between items-center pt-3 border-t border-border">
               <span className="text-[11px] text-muted">
-                {gitHubUser ? `${userRepos.length} repositories loaded` : "GitHub OAuth & Personal Access Tokens"}
+                {connectTab === "publicUrl"
+                  ? "Clone & mine public Git repos without auth"
+                  : gitHubUser
+                    ? `${userRepos.length} repositories loaded`
+                    : "GitHub OAuth & Personal Access Tokens"}
               </span>
               <div className="flex items-center gap-2">
                 <button

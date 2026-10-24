@@ -902,6 +902,66 @@
         }
       }
     },
+    "/api/v1/repositories/connect-public-url": {
+      "post": {
+        "tags": [
+          "Repositories"
+        ],
+        "summary": "Connect Public Repository",
+        "description": "Connect any public GitHub repository by URL without requiring account access tokens.",
+        "operationId": "connect_public_repository_api_v1_repositories_connect_public_url_post",
+        "parameters": [
+          {
+            "name": "X-Organization-ID",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Organization-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RepositoryConnectPublicUrlRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_RepositoryRead_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/repositories": {
       "get": {
         "tags": [
@@ -6859,6 +6919,33 @@
         },
         "type": "object",
         "title": "ReadinessStatus"
+      },
+      "RepositoryConnectPublicUrlRequest": {
+        "properties": {
+          "url": {
+            "type": "string",
+            "minLength": 3,
+            "title": "Url",
+            "example": "https://github.com/pallets/flask"
+          },
+          "branch": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Branch",
+            "example": "main"
+          }
+        },
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "title": "RepositoryConnectPublicUrlRequest"
       },
       "RepositoryConnectRequest": {
         "properties": {

@@ -40,6 +40,11 @@ class RepositoryConnectRequest(BaseModel):
     github_installation_id: str | None = Field(default=None, example="ghi_123456")
 
 
+class RepositoryConnectPublicUrlRequest(BaseModel):
+    url: str = Field(..., min_length=3, example="https://github.com/pallets/flask")
+    branch: str | None = Field(default=None, example="main")
+
+
 
 class RepositorySyncResponse(BaseModel):
     repository_id: str

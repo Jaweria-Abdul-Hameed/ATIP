@@ -592,10 +592,16 @@ async def get_repository_dependencies(
 ) -> DataResponse[DependencyGraphRead]:
     """Get import and dependency graph with nodes, edges, and cycles."""
     org_id = _extract_org_id(request, current_user)
-    await _verify_repo_access(session, id, org_id, current_user.id)
+    repo = await _verify_repo_access(session, id, org_id, current_user.id)
 
-    target_repo_path = repo_path or "."
     git_fetcher = SafeGitFetcher()
+    snapshot_mgr = SnapshotManager(git_fetcher=git_fetcher)
+    resolved_dir = await snapshot_mgr.resolve_working_repo_path(
+        org_id=org_id,
+        repository=repo,
+        local_repo_path=repo_path,
+    )
+    target_repo_path = str(resolved_dir)
     try:
         resolved_sha = await git_fetcher.resolve_commit_sha(target_repo_path, commit_sha)
     except GitSecurityError as e:
@@ -719,10 +725,16 @@ async def get_file_dependencies(
 ) -> DataResponse[FileDependencyDetailRead]:
     """Get direct dependencies and reverse dependents (blast radius) for a specific file."""
     org_id = _extract_org_id(request, current_user)
-    await _verify_repo_access(session, id, org_id, current_user.id)
+    repo = await _verify_repo_access(session, id, org_id, current_user.id)
 
-    target_repo_path = repo_path or "."
     git_fetcher = SafeGitFetcher()
+    snapshot_mgr = SnapshotManager(git_fetcher=git_fetcher)
+    resolved_dir = await snapshot_mgr.resolve_working_repo_path(
+        org_id=org_id,
+        repository=repo,
+        local_repo_path=repo_path,
+    )
+    target_repo_path = str(resolved_dir)
     try:
         resolved_sha = await git_fetcher.resolve_commit_sha(target_repo_path, commit_sha)
     except Exception as e:
@@ -793,10 +805,16 @@ async def get_repository_complexity(
 ) -> DataResponse[list[FileComplexityRead]]:
     """Compute LOC, Cyclomatic Complexity, function inventory, and maintainability index."""
     org_id = _extract_org_id(request, current_user)
-    await _verify_repo_access(session, id, org_id, current_user.id)
+    repo = await _verify_repo_access(session, id, org_id, current_user.id)
 
-    target_repo_path = repo_path or "."
     git_fetcher = SafeGitFetcher()
+    snapshot_mgr = SnapshotManager(git_fetcher=git_fetcher)
+    resolved_dir = await snapshot_mgr.resolve_working_repo_path(
+        org_id=org_id,
+        repository=repo,
+        local_repo_path=repo_path,
+    )
+    target_repo_path = str(resolved_dir)
     try:
         resolved_sha = await git_fetcher.resolve_commit_sha(target_repo_path, commit_sha)
     except (GitSecurityError, GitExecutionError) as e:
@@ -898,10 +916,16 @@ async def get_repository_tests(
 ) -> DataResponse[list[DiscoveredTestRead]]:
     """Discover existing test suites, test cases, and framework types across repository."""
     org_id = _extract_org_id(request, current_user)
-    await _verify_repo_access(session, id, org_id, current_user.id)
+    repo = await _verify_repo_access(session, id, org_id, current_user.id)
 
-    target_repo_path = repo_path or "."
     git_fetcher = SafeGitFetcher()
+    snapshot_mgr = SnapshotManager(git_fetcher=git_fetcher)
+    resolved_dir = await snapshot_mgr.resolve_working_repo_path(
+        org_id=org_id,
+        repository=repo,
+        local_repo_path=repo_path,
+    )
+    target_repo_path = str(resolved_dir)
     try:
         resolved_sha = await git_fetcher.resolve_commit_sha(target_repo_path, commit_sha)
     except (GitSecurityError, GitExecutionError) as e:
@@ -1165,9 +1189,15 @@ async def trigger_analysis(
     org_id = _extract_org_id(request, current_user)
     repo = await _verify_repo_access(session, id, org_id, current_user.id)
 
-    target_repo_path = payload.repo_path or "."
-    target_ref = payload.commit_sha or payload.branch or "HEAD"
     git_fetcher = SafeGitFetcher()
+    snapshot_mgr = SnapshotManager(git_fetcher=git_fetcher)
+    resolved_dir = await snapshot_mgr.resolve_working_repo_path(
+        org_id=org_id,
+        repository=repo,
+        local_repo_path=payload.repo_path,
+    )
+    target_repo_path = str(resolved_dir)
+    target_ref = payload.commit_sha or payload.branch or repo.default_branch or "HEAD"
 
     try:
         resolved_sha = await git_fetcher.resolve_commit_sha(target_repo_path, target_ref)

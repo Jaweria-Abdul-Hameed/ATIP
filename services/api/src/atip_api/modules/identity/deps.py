@@ -37,12 +37,15 @@ def get_current_session_payload(request: Request) -> dict[str, Any]:
     """Retrieve and verify the active session token payload.
 
     Raises UnauthenticatedError if missing or invalid, SessionExpiredError if expired.
-    In development mode, provides a fallback reviewer session.
+    In development mode with reviewer header, provides a fallback reviewer session.
     """
     token = extract_token_from_request(request)
     if not token:
         settings = get_settings()
-        if settings.ENVIRONMENT == "development":
+        if settings.ENVIRONMENT == "development" and (
+            request.headers.get("X-Reviewer-Fallback") == "true"
+            or request.headers.get("X-Dev-Reviewer") == "true"
+        ):
             return {
                 "sub": "user_seed_reviewer",
                 "email": "reviewer@atip.dev",

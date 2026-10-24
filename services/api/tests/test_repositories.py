@@ -223,3 +223,36 @@ async def test_repository_tenant_isolation(client: AsyncClient, db_session: Asyn
     )
     assert res.status_code == 404
     assert res.json()["error"]["code"] == "NOT_FOUND"
+
+
+@pytest.mark.asyncio
+async def test_connect_public_repository_by_url(
+    client: AsyncClient, db_session: AsyncSession
+) -> None:
+    """Test connecting an arbitrary public repository by URL without GitHub credentials."""
+    _, org, token = await _create_test_env(
+        db_session, "public_dev@atip.dev", "Public Dev", "public-org", MembershipRole.DEVELOPER
+    )
+
+    # 1. Connect public repository by URL
+    res = await client.post(
+        "/api/v1/repositories/connect-public-url",
+        json={"url": "https://github.com/pallets/flask", "branch": "main"},
+        headers={"Authorization": f"Bearer {token}", "X-Organization-ID": org.id},
+    )
+    assert res.status_code == 201
+    data = res.json()["data"]
+    assert data["name"] == "flask"
+    assert data["full_name"] == "pallets/flask"
+    assert data["clone_url"] == "https://github.com/pallets/flask.git"
+    assert data["is_private"] is False
+    assert data["default_branch"] == "main"
+
+    # 2. Duplicate connection rejected
+    dup_res = await client.post(
+        "/api/v1/repositories/connect-public-url",
+        json={"url": "https://github.com/pallets/flask"},
+        headers={"Authorization": f"Bearer {token}", "X-Organization-ID": org.id},
+    )
+    assert dup_res.status_code == 409
+    assert dup_res.json()["error"]["code"] == "CONFLICT"
