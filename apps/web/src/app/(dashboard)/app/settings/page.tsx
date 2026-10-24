@@ -22,6 +22,11 @@ import {
   Plus,
   X,
   ExternalLink,
+  HelpCircle,
+  Activity,
+  FileCode2,
+  CheckCircle2,
+  AlertCircle,
 } from "lucide-react";
 
 type SettingsTab =
@@ -182,35 +187,203 @@ function SettingsContent() {
       {/* Tab Contents */}
       <div className="mt-6 max-w-2xl">
         {activeTab === "profile" && (
-          <div className="rounded-xl border border-border bg-surface p-6 shadow-sm space-y-5">
-            <h2 className="text-sm font-semibold text-text">User Profile</h2>
-            <div>
-              <label className="block text-xs font-medium text-muted mb-1.5">
-                Full Name
-              </label>
-              <input
-                type="text"
-                defaultValue={DEMO_USER.name}
-                className="w-full px-3 py-2 rounded-lg border border-border bg-surface text-xs text-text focus:outline-none focus:ring-1 focus:ring-text"
-              />
+          <div className="space-y-6">
+            <div className="rounded-xl border border-border bg-surface p-6 shadow-sm space-y-5">
+              <h2 className="text-sm font-semibold text-text">User Profile</h2>
+              <div>
+                <label className="block text-xs font-medium text-muted mb-1.5">
+                  Full Name
+                </label>
+                <input
+                  type="text"
+                  defaultValue={DEMO_USER.name}
+                  className="w-full px-3 py-2 rounded-lg border border-border bg-surface text-xs text-text focus:outline-none focus:ring-1 focus:ring-text"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-muted mb-1.5">
+                  Email Address
+                </label>
+                <input
+                  type="email"
+                  defaultValue={DEMO_USER.email}
+                  className="w-full px-3 py-2 rounded-lg border border-border bg-surface text-xs text-text focus:outline-none focus:ring-1 focus:ring-text"
+                />
+              </div>
+              <div className="pt-2">
+                <button
+                  onClick={handleSave}
+                  className="px-4 py-2 rounded-lg bg-text text-surface font-medium text-xs hover:opacity-90 transition-opacity cursor-pointer"
+                >
+                  {saved ? "Saved ✓" : "Save Changes"}
+                </button>
+              </div>
             </div>
-            <div>
-              <label className="block text-xs font-medium text-muted mb-1.5">
-                Email Address
-              </label>
-              <input
-                type="email"
-                defaultValue={DEMO_USER.email}
-                className="w-full px-3 py-2 rounded-lg border border-border bg-surface text-xs text-text focus:outline-none focus:ring-1 focus:ring-text"
-              />
-            </div>
-            <div className="pt-2">
-              <button
-                onClick={handleSave}
-                className="px-4 py-2 rounded-lg bg-text text-surface font-medium text-xs hover:opacity-90 transition-opacity cursor-pointer"
-              >
-                {saved ? "Saved ✓" : "Save Changes"}
-              </button>
+
+            {/* Code Quality & Complexity Standards Card */}
+            <div
+              id="code-quality-guide"
+              className="rounded-xl border border-border bg-surface p-6 shadow-sm space-y-6 scroll-mt-6"
+            >
+              <div>
+                <div className="flex items-center gap-2">
+                  <Activity className="w-4 h-4 text-text" />
+                  <h2 className="text-sm font-semibold text-text">
+                    Code Quality & Complexity Standards
+                  </h2>
+                </div>
+                <p className="text-xs text-muted mt-1 leading-relaxed">
+                  A layman-friendly reference guide explaining how ATIP measures code size, branching complexity, and maintainability across indexed repository files.
+                </p>
+              </div>
+
+              {/* 1. Lines */}
+              <div className="space-y-2 border-t border-border pt-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-text flex items-center gap-1.5">
+                    <FileCode2 className="w-3.5 h-3.5 text-muted" />
+                    <span>1. Lines of Code (LOC)</span>
+                  </span>
+                  <span className="text-[11px] text-muted">File Size</span>
+                </div>
+                <p className="text-xs text-muted leading-relaxed">
+                  The total physical count of lines inside a source file. In software engineering, file size is a primary indicator of whether a module follows the Single Responsibility Principle:
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1 text-xs">
+                  <div className="p-2.5 rounded-lg border border-border bg-soft">
+                    <span className="text-emerald-600 dark:text-emerald-400 font-semibold block text-[11px]">&lt; 300 lines</span>
+                    <span className="text-text font-medium text-xs">Modular</span>
+                    <p className="text-[10px] text-muted mt-0.5">Focused purpose, easy to comprehend and review.</p>
+                  </div>
+                  <div className="p-2.5 rounded-lg border border-border bg-soft">
+                    <span className="text-amber-600 dark:text-amber-400 font-semibold block text-[11px]">300 – 1,000 lines</span>
+                    <span className="text-text font-medium text-xs">Growing File</span>
+                    <p className="text-[10px] text-muted mt-0.5">Moderate size; benefits from grouping into smaller helper files.</p>
+                  </div>
+                  <div className="p-2.5 rounded-lg border border-border bg-soft">
+                    <span className="text-rose-600 dark:text-rose-400 font-semibold block text-[11px]">1,000+ lines</span>
+                    <span className="text-text font-medium text-xs">Monolithic</span>
+                    <p className="text-[10px] text-muted mt-0.5">High cognitive burden; prime candidate for decomposition.</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* 2. Cyclomatic Complexity */}
+              <div className="space-y-2 border-t border-border pt-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-text flex items-center gap-1.5">
+                    <HelpCircle className="w-3.5 h-3.5 text-muted" />
+                    <span>2. Cyclomatic Complexity (Branching Paths)</span>
+                  </span>
+                  <span className="text-[11px] text-muted">McCabe (1976)</span>
+                </div>
+                <p className="text-xs text-muted leading-relaxed">
+                  Measures the <strong>number of distinct logical decision paths</strong> through the code. Every time the code branches (<code className="font-mono bg-soft px-1 py-0.5 rounded border border-border">if</code>, <code className="font-mono bg-soft px-1 py-0.5 rounded border border-border">else</code>, <code className="font-mono bg-soft px-1 py-0.5 rounded border border-border">for</code>, <code className="font-mono bg-soft px-1 py-0.5 rounded border border-border">while</code>, <code className="font-mono bg-soft px-1 py-0.5 rounded border border-border">try/except</code>, <code className="font-mono bg-soft px-1 py-0.5 rounded border border-border">and</code>, <code className="font-mono bg-soft px-1 py-0.5 rounded border border-border">or</code>), the score increases by 1:
+                </p>
+                <div className="space-y-1.5 pt-1 text-xs">
+                  <div className="flex items-start justify-between p-2 rounded-lg border border-border bg-soft">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                      <div>
+                        <span className="font-semibold text-text">1 – 10: Simple Code</span>
+                        <p className="text-[11px] text-muted">Linear, low-risk logic. Can be completely verified with 1 to 5 unit test cases.</p>
+                      </div>
+                    </div>
+                    <Badge variant="success" className="text-[10px] shrink-0">Low Risk</Badge>
+                  </div>
+
+                  <div className="flex items-start justify-between p-2 rounded-lg border border-border bg-soft">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
+                      <div>
+                        <span className="font-semibold text-text">11 – 25: Moderate Complexity</span>
+                        <p className="text-[11px] text-muted">Multiple branches and conditions. Requires parameterized tests to avoid edge-case failures.</p>
+                      </div>
+                    </div>
+                    <Badge variant="warning" className="text-[10px] shrink-0">Moderate Risk</Badge>
+                  </div>
+
+                  <div className="flex items-start justify-between p-2 rounded-lg border border-border bg-soft">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-orange-500 shrink-0" />
+                      <div>
+                        <span className="font-semibold text-text">26 – 50: High Complexity</span>
+                        <p className="text-[11px] text-muted">Deeply nested control structures. Fault density rises significantly; requires targeted white-box test suites.</p>
+                      </div>
+                    </div>
+                    <Badge variant="warning" className="text-[10px] shrink-0">High Risk</Badge>
+                  </div>
+
+                  <div className="flex items-start justify-between p-2 rounded-lg border border-border bg-soft">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-rose-500 shrink-0" />
+                      <div>
+                        <span className="font-semibold text-text">50+: Critical / Spaghetti Logic</span>
+                        <p className="text-[11px] text-muted">Untestable without refactoring. Files like this are statistical breeding grounds for regressions.</p>
+                      </div>
+                    </div>
+                    <Badge variant="error" className="text-[10px] shrink-0">Critical</Badge>
+                  </div>
+                </div>
+              </div>
+
+              {/* 3. Maintainability Index */}
+              <div className="space-y-2 border-t border-border pt-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-text flex items-center gap-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-muted" />
+                    <span>3. Maintainability Index (MI)</span>
+                  </span>
+                  <span className="text-[11px] text-muted">SEI & Microsoft Standard</span>
+                </div>
+                <p className="text-xs text-muted leading-relaxed">
+                  An industry-standard score from <strong>0 to 100</strong> calculating how easily a developer can read, understand, and safely modify a file. Higher numbers represent cleaner, healthier code:
+                </p>
+                <div className="space-y-1.5 pt-1 text-xs">
+                  <div className="flex items-start justify-between p-2 rounded-lg border border-border bg-soft">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                      <div>
+                        <span className="font-semibold text-text">80 – 100: Clean & Highly Maintainable</span>
+                        <p className="text-[11px] text-muted">Clean architecture. Changes can be made quickly with minimal chance of unintended side effects.</p>
+                      </div>
+                    </div>
+                    <Badge variant="success" className="text-[10px] shrink-0">Clean</Badge>
+                  </div>
+
+                  <div className="flex items-start justify-between p-2 rounded-lg border border-border bg-soft">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
+                      <div>
+                        <span className="font-semibold text-text">40 – 79: Moderate Maintainability</span>
+                        <p className="text-[11px] text-muted">Standard business logic. Typical maintenance effort required.</p>
+                      </div>
+                    </div>
+                    <Badge variant="warning" className="text-[10px] shrink-0">Moderate</Badge>
+                  </div>
+
+                  <div className="flex items-start justify-between p-2 rounded-lg border border-border bg-soft">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-rose-500 shrink-0" />
+                      <div>
+                        <span className="font-semibold text-text">0 – 39: Fragile & High Hazard</span>
+                        <p className="text-[11px] text-muted">Extremely dense, brittle code. Any change is risky without automated regression tests.</p>
+                      </div>
+                    </div>
+                    <Badge variant="error" className="text-[10px] shrink-0">Fragile</Badge>
+                  </div>
+                </div>
+              </div>
+
+              {/* 4. How ATIP uses this */}
+              <div className="border-t border-border pt-4 space-y-1.5">
+                <span className="text-xs font-semibold text-text block">
+                  How ATIP Uses These Scores
+                </span>
+                <p className="text-xs text-muted leading-relaxed">
+                  ATIP combines file churn (how often the file changes in Git) with Cyclomatic Complexity and low Maintainability Index to calculate the overall <strong>Defect Risk Score (0–100)</strong>. Files flagged with high risk are automatically prioritized for white-box test candidate generation and MC/DC decision-coverage verification.
+                </p>
+              </div>
             </div>
           </div>
         )}

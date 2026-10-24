@@ -35,6 +35,7 @@ import {
   Clock,
   Layers,
   Activity,
+  HelpCircle,
 } from "lucide-react";
 
 export default function RepositoryWorkspacePage() {
@@ -61,6 +62,7 @@ export default function RepositoryWorkspacePage() {
   const [complexityFiles, setComplexityFiles] = useState<FileComplexityApiItem[]>([]);
   const [coverage, setCoverage] = useState<CoverageSummaryApiItem | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showMetricGuide, setShowMetricGuide] = useState(false);
 
   // Load repository and mined data
   const loadRepoData = useCallback(async () => {
@@ -452,7 +454,86 @@ export default function RepositoryWorkspacePage() {
 
       {/* Tab: Files */}
       {activeTab === "files" && (
-        <div className="pt-6">
+        <div className="pt-6 space-y-4">
+          {/* Quick Metric Ranges Legend */}
+          <div className="rounded-xl border border-border bg-soft/60 p-3.5 flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-text">Complexity:</span>
+                <span className="inline-flex items-center gap-1 text-[11px] text-muted">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                  1–10 Simple
+                </span>
+                <span className="inline-flex items-center gap-1 text-[11px] text-muted">
+                  <span className="w-2 h-2 rounded-full bg-amber-500" />
+                  11–25 Moderate
+                </span>
+                <span className="inline-flex items-center gap-1 text-[11px] text-muted">
+                  <span className="w-2 h-2 rounded-full bg-rose-500" />
+                  26+ Critical
+                </span>
+              </div>
+              <div className="hidden sm:block w-px h-3.5 bg-border" />
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-text">MI (Maintainability):</span>
+                <span className="inline-flex items-center gap-1 text-[11px] text-muted">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                  80–100 Clean
+                </span>
+                <span className="inline-flex items-center gap-1 text-[11px] text-muted">
+                  <span className="w-2 h-2 rounded-full bg-amber-500" />
+                  40–79 Moderate
+                </span>
+                <span className="inline-flex items-center gap-1 text-[11px] text-muted">
+                  <span className="w-2 h-2 rounded-full bg-rose-500" />
+                  0–39 Fragile
+                </span>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowMetricGuide(!showMetricGuide)}
+              className="inline-flex items-center gap-1.5 text-xs text-muted hover:text-text underline cursor-pointer shrink-0"
+            >
+              <HelpCircle className="w-3.5 h-3.5" />
+              <span>{showMetricGuide ? "Hide Guide" : "What do these mean?"}</span>
+            </button>
+          </div>
+
+          {/* Expandable Layman Guide */}
+          {showMetricGuide && (
+            <div className="rounded-xl border border-border bg-surface p-4 text-xs space-y-3 shadow-xs">
+              <div className="flex items-center justify-between border-b border-border pb-2">
+                <span className="font-semibold text-text">Understanding File Health & Complexity Metrics</span>
+                <Link
+                  href="/app/settings?tab=profile#code-quality-guide"
+                  className="text-[11px] text-muted hover:text-text underline"
+                >
+                  Full Documentation in Settings &rarr;
+                </Link>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="p-3 rounded-lg border border-border bg-soft space-y-1">
+                  <span className="font-semibold text-text block">Lines (Size)</span>
+                  <p className="text-muted leading-relaxed text-[11px]">
+                    Total physical lines of code. Files over 500 lines are harder to maintain; files over 1,000 lines often bundle too many responsibilities and should be modularized.
+                  </p>
+                </div>
+                <div className="p-3 rounded-lg border border-border bg-soft space-y-1">
+                  <span className="font-semibold text-text block">Complexity (Branching)</span>
+                  <p className="text-muted leading-relaxed text-[11px]">
+                    Counts logical branch paths (<code className="font-mono bg-surface px-1 py-0.5 rounded border border-border">if/else</code>, loops, <code className="font-mono bg-surface px-1 py-0.5 rounded border border-border">try/except</code>). Higher numbers mean more tangled paths where bugs hide and thorough testing is harder.
+                  </p>
+                </div>
+                <div className="p-3 rounded-lg border border-border bg-soft space-y-1">
+                  <span className="font-semibold text-text block">MI (Maintainability Index)</span>
+                  <p className="text-muted leading-relaxed text-[11px]">
+                    Standard SEI/Microsoft score from 0 to 100. Higher is better. <strong>80–100</strong> is clean and easy to maintain; below <strong>40</strong> is fragile code with high regression risk.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="rounded-xl border border-border bg-surface overflow-hidden shadow-sm">
             <div className="p-4 border-b border-border flex items-center justify-between">
               <span className="text-xs font-semibold text-text">
@@ -462,22 +543,55 @@ export default function RepositoryWorkspacePage() {
             </div>
             {complexityFiles.length > 0 ? (
               <div className="divide-y divide-border text-xs">
-                {complexityFiles.map((f) => (
-                  <div key={f.file_path} className="flex items-center justify-between p-3.5 hover:bg-soft">
-                    <div className="flex items-center gap-2 font-mono text-text">
-                      <FileCode2 className="w-4 h-4 text-muted" />
-                      <span>{f.file_path}</span>
+                {complexityFiles.map((f) => {
+                  const isHighComplexity = f.cyclomatic_complexity > 25;
+                  const isMediumComplexity = f.cyclomatic_complexity > 10;
+                  const isCleanMI = f.maintainability_index >= 80;
+                  const isModerateMI = f.maintainability_index >= 40;
+
+                  return (
+                    <div key={f.file_path} className="flex items-center justify-between p-3.5 hover:bg-soft">
+                      <div className="flex items-center gap-2 font-mono text-text">
+                        <FileCode2 className="w-4 h-4 text-muted shrink-0" />
+                        <span className="truncate">{f.file_path}</span>
+                      </div>
+                      <div className="flex items-center gap-3 shrink-0">
+                        <span className="text-muted text-[11px]">{f.lines_total} lines</span>
+                        <span
+                          className={`text-[11px] font-mono px-2 py-0.5 rounded border ${
+                            isHighComplexity
+                              ? "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20"
+                              : isMediumComplexity
+                              ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
+                              : "bg-surface text-muted border-border"
+                          }`}
+                          title={`Cyclomatic Complexity: ${f.cyclomatic_complexity} decision paths (${
+                            isHighComplexity ? "Critical - High bug risk" : isMediumComplexity ? "Moderate" : "Simple"
+                          })`}
+                        >
+                          Complexity: {f.cyclomatic_complexity}
+                        </span>
+                        <span
+                          className={`text-[11px] font-mono px-2 py-0.5 rounded border ${
+                            isCleanMI
+                              ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+                              : isModerateMI
+                              ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
+                              : "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20"
+                          }`}
+                          title={`Maintainability Index: ${f.maintainability_index}/100 (${
+                            isCleanMI ? "Clean / Easy to maintain" : isModerateMI ? "Moderate" : "Fragile / High risk"
+                          })`}
+                        >
+                          MI: {f.maintainability_index}
+                        </span>
+                        <Badge variant={isHighComplexity ? "error" : isMediumComplexity ? "warning" : "success"}>
+                          {f.language}
+                        </Badge>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-4">
-                      <span className="text-muted text-[11px]">{f.lines_total} lines</span>
-                      <span className="text-muted text-[11px]">Complexity: {f.cyclomatic_complexity}</span>
-                      <span className="text-muted text-[11px]">MI: {f.maintainability_index}</span>
-                      <Badge variant={f.cyclomatic_complexity > 5 ? "warning" : "success"}>
-                        {f.language}
-                      </Badge>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               <div className="p-8 text-center text-xs text-muted space-y-2">
@@ -485,7 +599,7 @@ export default function RepositoryWorkspacePage() {
                 <p>No source files analyzed yet for this repository.</p>
                 <button
                   onClick={handleTriggerAnalysis}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-text text-surface text-xs font-medium"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-text text-surface text-xs font-medium cursor-pointer"
                 >
                   <Play className="w-3.5 h-3.5" />
                   <span>Run Analysis</span>
