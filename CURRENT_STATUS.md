@@ -1,9 +1,9 @@
 # ATIP — persistent agent checkpoint
 
-**State:** SETUP, M0, M1, M2, M3 COMPLETED (All tasks M3-01 through M3-06 verified).
-**Next action:** Phase M4 Task M4-01: Design and implement deterministic versioned risk model with explainable feature weights and missing-data handling.
-**Active phase:** Phase M4 — risk and test intelligence (to be started in a new conversation).
-**Last verified commit:** `b7c82ec` (Phase M3 completion ready to commit and push).
+**State:** SETUP, M0, M1, M2, M3, M4 COMPLETED (All tasks M4-01 through M4-14 verified).
+**Next action:** Phase M5 Task M5-01: Implement Python and JS/TS AST/CFG parser adapters with source spans, language version, diagnostics, bounded parsing and test fixture repositories.
+**Active phase:** Phase M5 — white-box static analysis and objective discovery (to be started in a new conversation).
+**Last verified commit:** Ready to commit Phase M4 completion.
 **Current blockers:** None. No human intervention required.
 
 ## Progress log (append verified work only)
@@ -44,18 +44,22 @@
 | 2026-10-21 12:15 | M3-06 | Wire repository tabs (Commits, Files, Dependencies, Coverage Objectives), trigger analysis CTA, live polling & honest empty states | `apps/web/src/lib/api-client.ts`, `apps/web/src/lib/api-adapter.ts`, `apps/web/src/app/(dashboard)/app/repositories/[id]/page.tsx`. `tsc --noEmit` (0 errors), `next lint` (0 errors), `next build` (16/16 pages static compiled), full monorepo tests (`pnpm test`: 74/74 pytest + tsc) green. Exit code 0 | verified |
 | 2026-10-24 15:15 | M3-PUBLIC-REPO | Add connect by public Git URL without auth, isolated clone, and live mining (churn, complexity, dependencies) | `POST /api/v1/repositories/connect-public-url`, `repositories/page.tsx`, `git_fetcher.py`, `snapshot.py`, `router.py`. Cloned and mined `pallets/flask` live (47 nodes, 675 edges, 83 files, cyclomatic complexity + maintainability index computed). 76/76 pytest passed, tsc green, next lint clean. | 74cb956 |
 | 2026-10-24 16:00 | M3-METRIC-GUIDE | Add layman metric ranges legend to Files tab and comprehensive Code Quality & Complexity Standards reference guide to Settings -> Profile | `apps/web/src/app/(dashboard)/app/repositories/[id]/page.tsx`, `apps/web/src/app/(dashboard)/app/settings/page.tsx`, `scripts/capture_metrics_guidance.mjs`. Verified `tsc --noEmit` (0 errors), `next lint` (clean), 76/76 pytest passed. Captured screenshots `33_files_tab_metrics_legend.png`, `34_files_tab_expanded_guide.png`, and `35_settings_profile_code_quality_guide.png`. | a7fe491 |
+| 2026-10-24 21:20 | M4-01..04 | Deterministic versioned risk engine (`DeterministicRiskEngine`), explainable feature weights, missing-data handling, bounded BFS change-impact propagation (`ChangeImpactAnalyzer`), impacted regression test selection, test gaps, flakiness signals (`ImpactedTestSelector`), Alembic migration `c1a2f3e4d5b6` for `risk_assessments` in PostgreSQL | `services/api/src/atip_api/modules/risk/`: `engine.py`, `impact.py`, `test_selector.py`, `service.py`, `router.py`, `schemas.py`, Alembic `c1a2f3e4d5b6`. `services/api/tests/test_risk_engine.py` (8/8 passed). Exit code 0 | verified |
+| 2026-10-24 21:30 | M4-05..06 | Wire Risk Intelligence (`/app/risk`) and Test Plans (`/app/test-plans`) to real backend endpoints, detail drawer evidence breakdown, impact graph tab, validation on known fixture commits and limitation disclosures | `apps/web/src/lib/api-client.ts`, `apps/web/src/lib/api-adapter.ts`, `apps/web/src/app/(dashboard)/app/risk/page.tsx`, `apps/web/src/app/(dashboard)/app/test-plans/page.tsx`. `services/api/tests/test_risk_validation_fixtures.py` (3/3 passed). `scripts/capture_m4_risk_ui.mjs` captured screenshots `36_risk_intelligence_overview.png`, `37_risk_intelligence_drawer.png`, `38_risk_intelligence_impact_tab.png`, `39_test_plans_selection.png`, `40_test_plans_gaps.png`. | verified |
+| 2026-10-24 21:35 | M4-07..14 | ML data governance (`SupervisedTargetSpec`, `FeatureSchemaSpec`), environment gate (`TrainingEnvironmentGate`), immutable dataset manifest (`DatasetManifest`), multi-model benchmarking comparing Logistic Regression, Random Forest, LightGBM, and XGBoost vs deterministic baseline evaluated on PR-AUC, calibration, and latency. Serialized champion artifact and benchmark report `artifacts/ml/benchmark_report.json`. Inference adapter with safe deterministic fallback | `services/api/src/atip_api/modules/risk/ml/`: `governance.py`, `environment_gate.py`, `dataset_manifest.py`, `benchmark.py`, `inference.py`. `services/api/tests/test_risk_ml_benchmarking.py` (5/5 passed). Full monorepo tests (`pnpm test`: 92/92 pytest + tsc) green, Next.js build (16/16 pages static compiled) successful. Exit code 0 | verified |
 
 ## Service status summary
-- PostgreSQL: `localhost:5432` (`atip_db`) — healthy, migrated to revision `ab78872c6988`.
+- PostgreSQL: `localhost:5432` (`atip_db`) — healthy, migrated to revision `c1a2f3e4d5b6` (`risk_assessments` table active).
 - Redis: `localhost:6379/0` — healthy, ping operational.
 - RabbitMQ: `localhost:5672` (AMQP) & `localhost:15672` (Management) — healthy, robust connection verified.
 - MinIO: `localhost:9000` (S3) & `localhost:9001` (Console) — healthy, bucket `atip-artifacts` created and ready.
 - FastAPI: `services/api` modular monolith ready to serve on `localhost:8000`.
+- ML Model Registry: Champion artifact `artifacts/ml/champion_defect_model.joblib` and benchmark report `artifacts/ml/benchmark_report.json` generated and verifiable.
 
 ## External setup needed (only if encountered)
-No external setup blockers. Local containerized infrastructure, OIDC/JWT crypto, GitHub App token encryption, and repository mining are completely operational.
+No external setup blockers. Local containerized infrastructure, OIDC/JWT crypto, GitHub App token encryption, repository mining, deterministic risk scoring, and CPU ML benchmarking are completely operational.
 
 ## Next agent handoff
 Read `AGENTS.md`, then this file, then `TASKLIST.md`.
-The active phase boundary is reached for **Phase M3**. All checkboxes for M3 (M3-01 through M3-06) are verified and checked.
-The next phase to begin in the new conversation is **Phase M4 — risk and test intelligence**, starting with task **M4-01** (Design and implement deterministic versioned risk model with explainable feature weights and missing-data handling).
+The active phase boundary is reached for **Phase M4**. All checkboxes for M4 (M4-01 through M4-14) are verified and checked.
+The next phase to begin in the new conversation is **Phase M5 — white-box static analysis and objective discovery**, starting with task **M5-01** (Implement Python and JS/TS AST/CFG parser adapters with source spans, language version, diagnostics, bounded parsing and test fixture repositories).

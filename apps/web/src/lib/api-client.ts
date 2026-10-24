@@ -310,6 +310,109 @@ export interface AnalysisRunApiItem {
   created_at: string;
 }
 
+export interface RiskFactorApiItem {
+  factor_key: string;
+  name: string;
+  raw_value: any;
+  normalized_score: number;
+  weight: number;
+  weighted_score: number;
+  impact: "low" | "medium" | "high" | "critical";
+  description: string;
+  confidence: number;
+  is_missing: boolean;
+  missing_reason?: string | null;
+}
+
+export interface ChangeImpactNodeApiItem {
+  file_path: string;
+  depth: number;
+  impact_score: number;
+  is_direct: boolean;
+  imported_by: string[];
+  propagation_reason: string;
+}
+
+export interface FileRiskAssessmentApiItem {
+  file_path: string;
+  risk_score: number;
+  risk_tier: "low" | "medium" | "high" | "critical";
+  confidence: number;
+  has_missing_data: boolean;
+  missing_reasons: string[];
+  factors: RiskFactorApiItem[];
+  direct_dependents_count: number;
+  transitive_dependents_count: number;
+  churn_count: number;
+  lines_changed: number;
+  cyclomatic_complexity?: number | null;
+  maintainability_index?: number | null;
+  coverage_pct?: number | null;
+  has_test_file: boolean;
+  defect_commit_count: number;
+  associated_tests: string[];
+}
+
+export interface RiskAssessmentSummaryApiItem {
+  id: string;
+  repository_id: string;
+  commit_sha: string;
+  branch: string;
+  model_version: string;
+  model_type: string;
+  overall_score: number;
+  risk_tier: "low" | "medium" | "high" | "critical";
+  confidence: number;
+  has_missing_data: boolean;
+  feature_weights: Record<string, number>;
+  summary_stats: {
+    files_analyzed?: number;
+    high_risk_count?: number;
+    critical_risk_count?: number;
+    missing_data_count?: number;
+    avg_score?: number;
+    top_risk_file?: string;
+    top_risk_score?: number;
+  };
+  evaluated_at: string;
+  files: FileRiskAssessmentApiItem[];
+  impacted_nodes?: ChangeImpactNodeApiItem[];
+}
+
+export interface SelectedRegressionTestApiItem {
+  test_file: string;
+  test_identifier: string;
+  priority: "critical" | "high" | "medium" | "low";
+  selection_reason: string;
+  target_file: string;
+  depth: number;
+  is_flaky_candidate: boolean;
+  flakiness_score: number;
+  flakiness_reasons: string[];
+}
+
+export interface TestGapApiItem {
+  file_path: string;
+  risk_score: number;
+  severity: string;
+  gap_type: string;
+  impacted_dependents_count: number;
+  recommendation: string;
+}
+
+export interface TestSelectionResultApiItem {
+  repository_id: string;
+  commit_sha: string;
+  total_existing_tests_count: number;
+  selected_tests_count: number;
+  selected_tests: SelectedRegressionTestApiItem[];
+  test_gaps_count: number;
+  test_gaps: TestGapApiItem[];
+  flaky_tests_count: number;
+  flaky_tests: SelectedRegressionTestApiItem[];
+  selection_ratio_pct: number;
+}
+
 const DEFAULT_API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 
 export class ApiClient {
@@ -582,6 +685,72 @@ export class ApiClient {
     if (params?.page_size) sp.set("page_size", params.page_size.toString());
     const q = sp.toString() ? `?${sp.toString()}` : "";
     return this.request<PaginatedResponse<AnalysisRunApiItem>>(`/repositories/${repoId}/analyses${q}`);
+  }
+
+  async getRepositoryRisks(
+    repoId: string,
+    params?: { commitSha?: string; branch?: string; forceRecompute?: boolean }
+  ): Promise<RiskAssessmentSummaryApiItem> {
+    const sp = new URLSearchParams();
+    if (params?.commitSha) sp.set("commit_sha", params.commitSha);
+    if (params?.branch) sp.set("branch", params.branch);
+    if (params?.forceRecompute) sp.set("force_recompute", "true");
+    const q = sp.toString() ? `?${sp.toString()}` : "";
+    const res = await this.request<DataResponse<RiskAssessmentSummaryApiItem>>(
+      `/repositories/${repoId}/risks${q}`
+    );
+    return res.data;
+  }
+
+  async evaluateRepositoryRisks(
+    repoId: string,
+    payload: { commit_sha?: string; branch?: string; force_recompute?: boolean }
+  ): Promise<RiskAssessmentSummaryApiItem> {
+    const res = await this.request<DataResponse<RiskAssessmentSummaryApiItem>>(
+      `/repositories/${repoId}/risks/evaluate`,
+      {
+        method: "POST",
+        body: JSON.stringify(payload),
+      }
+    );
+    return res.data;
+  }
+
+  async getFileRiskDetail(
+    repoId: string,
+    filePath: string,
+    commitSha?: string
+  ): Promise<FileRiskAssessmentApiItem> {
+    const q = commitSha ? `?commit_sha=${encodeURIComponent(commitSha)}` : "";
+    const res = await this.request<DataResponse<FileRiskAssessmentApiItem>>(
+      `/repositories/${repoId}/risks/files/${encodeURIComponent(filePath)}${q}`
+    );
+    return res.data;
+  }
+
+  async getChangeImpactPropagation(
+    repoId: string,
+    params?: { commitSha?: string; branch?: string }
+  ): Promise<ChangeImpactNodeApiItem[]> {
+    const sp = new URLSearchParams();
+    if (params?.commitSha) sp.set("commit_sha", params.commitSha);
+    if (params?.branch) sp.set("branch", params.branch);
+    const q = sp.toString() ? `?${sp.toString()}` : "";
+    const res = await this.request<DataResponse<ChangeImpactNodeApiItem[]>>(
+      `/repositories/${repoId}/risks/impact${q}`
+    );
+    return res.data;
+  }
+
+  async getImpactedTestSelection(
+    repoId: string,
+    commitSha?: string
+  ): Promise<TestSelectionResultApiItem> {
+    const q = commitSha ? `?commit_sha=${encodeURIComponent(commitSha)}` : "";
+    const res = await this.request<DataResponse<TestSelectionResultApiItem>>(
+      `/repositories/${repoId}/risks/test-selection${q}`
+    );
+    return res.data;
   }
 }
 

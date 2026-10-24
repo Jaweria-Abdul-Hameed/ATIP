@@ -1,0 +1,79 @@
+{
+  "dataset_manifest_id": "manifest_8b160bbac12b",
+  "evaluated_at": "2026-10-24T16:35:43Z",
+  "primary_metric": "pr_auc",
+  "candidates": [
+    {
+      "model_name": "Deterministic Baseline (Heuristic Engine)",
+      "pr_auc": 1.0,
+      "roc_auc": 1.0,
+      "precision": 0.8571,
+      "recall": 1.0,
+      "f1": 0.9231,
+      "brier_score": 0.1186,
+      "latency_ms_per_sample": 0.0176,
+      "recall_at_top_20_pct": 1.0,
+      "tuned_decision_threshold": 0.5,
+      "is_production_candidate": false,
+      "selection_rationale": "Always-available foundational baseline without model dependencies."
+    },
+    {
+      "model_name": "Logistic Regression (L2)",
+      "pr_auc": 1.0,
+      "roc_auc": 1.0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "brier_score": 0.0,
+      "latency_ms_per_sample": 1.5654,
+      "recall_at_top_20_pct": 1.0,
+      "tuned_decision_threshold": 0.1,
+      "is_production_candidate": true,
+      "selection_rationale": "Selected as champion based on highest PR-AUC (1.0000), Brier calibration (0.0000), and sub-millisecond inference latency (1.565ms)."
+    },
+    {
+      "model_name": "Random Forest",
+      "pr_auc": 1.0,
+      "roc_auc": 1.0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "brier_score": 0.0004,
+      "latency_ms_per_sample": 36.8293,
+      "recall_at_top_20_pct": 1.0,
+      "tuned_decision_threshold": 0.15,
+      "is_production_candidate": false,
+      "selection_rationale": ""
+    },
+    {
+      "model_name": "LightGBM",
+      "pr_auc": 1.0,
+      "roc_auc": 1.0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "brier_score": 0.0,
+      "latency_ms_per_sample": 10.8849,
+      "recall_at_top_20_pct": 1.0,
+      "tuned_decision_threshold": 0.1,
+      "is_production_candidate": false,
+      "selection_rationale": ""
+    },
+    {
+      "model_name": "XGBoost",
+      "pr_auc": 1.0,
+      "roc_auc": 1.0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "brier_score": 0.0,
+      "latency_ms_per_sample": 9.5024,
+      "recall_at_top_20_pct": 1.0,
+      "tuned_decision_threshold": 0.1,
+      "is_production_candidate": false,
+      "selection_rationale": ""
+    }
+  ],
+  "selected_champion_model": "Logistic Regression (L2)",
+  "deterministic_baseline_comparison": "Champion Logistic Regression (L2) achieved PR-AUC of 1.0000 vs Deterministic Baseline PR-AUC of 1.0000 (Delta: +0.0000). Deterministic fallback preserved at zero runtime risk."
+}

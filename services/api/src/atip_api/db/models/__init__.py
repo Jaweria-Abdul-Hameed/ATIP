@@ -26,6 +26,7 @@ from atip_api.db.models.repository import (
     Repository,
     RepositorySnapshot,
 )
+from atip_api.db.models.risk import RiskAssessment
 
 __all__ = [
     "AnalysisRun",
@@ -50,6 +51,7 @@ __all__ = [
     "ROLE_HIERARCHY",
     "Repository",
     "RepositorySnapshot",
+    "RiskAssessment",
     "TimestampMixin",
     "User",
     "has_sufficient_role",

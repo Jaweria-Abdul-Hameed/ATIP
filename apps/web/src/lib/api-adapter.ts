@@ -258,4 +258,26 @@ export const api = {
       return "https://github.com/apps/atip-testing-platform/installations/new";
     }
   },
+
+  // Risk Intelligence
+  getRisks: async (
+    repoId: string,
+    opts?: { commitSha?: string; branch?: string; forceRecompute?: boolean }
+  ) => {
+    try {
+      return await apiClient.getRepositoryRisks(repoId, opts);
+    } catch (err) {
+      console.warn("FastAPI getRepositoryRisks failed, falling back to null:", err);
+      return null;
+    }
+  },
+
+  getTestSelection: async (repoId: string, commitSha?: string) => {
+    try {
+      return await apiClient.getImpactedTestSelection(repoId, commitSha);
+    } catch (err) {
+      console.warn("FastAPI getImpactedTestSelection failed, falling back to null:", err);
+      return null;
+    }
+  },
 };
