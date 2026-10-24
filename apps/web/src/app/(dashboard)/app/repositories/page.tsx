@@ -24,6 +24,7 @@ import {
   Check,
   AlertCircle,
   ExternalLink,
+  MoreVertical,
 } from "lucide-react";
 import { GitHubRepoItemApi, GitHubUserProfileApi } from "@/lib/api-client";
 
@@ -229,7 +230,7 @@ export default function RepositoriesPage() {
             Repositories
           </h1>
           <p className="mt-1 text-xs sm:text-sm text-muted">
-            Manage connected codebases and test coverage configurations.
+            Connect and manage your GitHub repositories.
           </p>
         </div>
 
@@ -244,7 +245,7 @@ export default function RepositoriesPage() {
         </div>
       </div>
 
-      {/* Tabs */}
+      {/* Tabs matching 02_Repositories.png */}
       <div className="flex items-center gap-6 border-b border-border text-xs font-medium">
         <button
           onClick={() => setActiveTab("all")}
@@ -254,7 +255,7 @@ export default function RepositoriesPage() {
               : "text-muted hover:text-text"
           }`}
         >
-          All ({repositories.length})
+          All ({displayRepos.length})
         </button>
         <button
           onClick={() => setActiveTab("connected")}
@@ -264,7 +265,7 @@ export default function RepositoriesPage() {
               : "text-muted hover:text-text"
           }`}
         >
-          Connected ({repositories.filter((r) => r.status === "connected" || r.status === "ready").length})
+          Connected ({displayRepos.filter((r) => r.status === "connected" || r.status === "ready").length})
         </button>
         <button
           onClick={() => setActiveTab("syncing")}
@@ -274,7 +275,7 @@ export default function RepositoriesPage() {
               : "text-muted hover:text-text"
           }`}
         >
-          Syncing ({repositories.filter((r) => r.status === "syncing").length})
+          Syncing ({displayRepos.filter((r) => r.status === "syncing").length})
         </button>
       </div>
 
@@ -307,62 +308,49 @@ export default function RepositoriesPage() {
         </div>
       </div>
 
-      {/* Repository Cards List matching 02_Repositories.png */}
-      <div className="space-y-3">
+      {/* Repository List matching 02_Repositories.png */}
+      <div className="space-y-2.5">
         {filteredRepos.length === 0 ? (
           <div className="text-center py-12 rounded-xl border border-border bg-surface text-muted text-xs">
             No repositories found matching &quot;{searchQuery}&quot;.
           </div>
         ) : (
           filteredRepos.map((repo) => (
-            <Link
+            <div
               key={repo.id}
-              href={`/app/repositories/${repo.id}`}
-              className="flex items-center justify-between p-4 rounded-xl border border-border bg-surface hover:bg-soft transition-all shadow-xs group"
+              className="flex items-center justify-between p-3.5 rounded-xl border border-border bg-surface hover:bg-soft transition-colors group text-xs"
             >
-              <div className="flex items-center gap-3.5 min-w-0">
+              <Link
+                href={`/app/repositories/${repo.id}`}
+                className="flex items-center gap-3.5 min-w-0 flex-1 cursor-pointer"
+              >
                 <div className="p-2.5 rounded-lg border border-border bg-soft text-text shrink-0">
-                  <FileCode2 className="w-5 h-5 text-muted group-hover:text-text transition-colors" />
+                  <FileCode2 className="w-4 h-4 text-muted group-hover:text-text transition-colors" />
                 </div>
                 <div className="min-w-0">
-                  <div className="text-sm font-semibold text-text truncate">
+                  <div className="text-xs font-semibold text-text truncate group-hover:underline">
                     {repo.name}
                   </div>
-                  <div className="text-xs text-muted truncate mt-0.5">
+                  <div className="text-[11px] text-muted truncate mt-0.5">
                     {repo.fullName}
                   </div>
                 </div>
-              </div>
+              </Link>
 
-              <div className="flex items-center gap-4 shrink-0">
+              <div className="flex items-center gap-4 shrink-0 pl-3">
                 <div className="flex items-center gap-1.5 text-xs text-muted">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
-                  <span className="hidden sm:inline">Last synced</span>
-                  <span>{repo.lastSynced}</span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block shrink-0" />
+                  <span>Last synced {repo.lastSynced}</span>
                 </div>
-
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-semibold text-text">
-                    Score: {repo.riskScore}
-                  </span>
-                  <Badge
-                    variant={
-                      repo.riskScore > 70
-                        ? "error"
-                        : repo.riskScore > 40
-                          ? "warning"
-                          : "neutral"
-                    }
-                  >
-                    {repo.riskScore > 70
-                      ? "High"
-                      : repo.riskScore > 40
-                        ? "Medium"
-                        : "Low"}
-                  </Badge>
-                </div>
+                <button
+                  type="button"
+                  className="p-1 rounded-md text-muted hover:text-text hover:bg-soft cursor-pointer"
+                  aria-label="Repository options"
+                >
+                  <MoreVertical className="w-3.5 h-3.5" />
+                </button>
               </div>
-            </Link>
+            </div>
           ))
         )}
       </div>

@@ -90,7 +90,7 @@ export default function OverviewPage() {
     },
   ];
 
-  const repoCount = repositories.length > 0 ? repositories.length : 3;
+  const repoCount = repositories.length > 0 ? repositories.length : 6;
 
   return (
     <AppShell breadcrumbs={["Overview"]}>

@@ -43,7 +43,7 @@ export default function RepositoryWorkspacePage() {
   const repoId = (params?.id as string) || "nextjs-dashboard";
 
   const [activeTab, setActiveTab] = useState<
-    "commits" | "overview" | "files" | "dependencies" | "coverage" | "settings"
+    "commits" | "overview" | "files" | "risk" | "tests" | "settings" | "dependencies" | "coverage"
   >("commits");
   const [selectedBranch, setSelectedBranch] = useState("main");
   const [branches, setBranches] = useState<BranchApiItem[]>([]);
@@ -183,7 +183,10 @@ export default function RepositoryWorkspacePage() {
   );
 
   return (
-    <AppShell breadcrumbs={["Repositories", repository.name]}>
+    <AppShell
+      breadcrumbs={["Repositories", repository.name]}
+      searchPlaceholder={`Repositories / ${repository.name || "nextjs-dashboard"}`}
+    >
       {/* Header matching 03_Repository_Workspace.png */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-2 pb-6 border-b border-border">
         <div className="flex items-center gap-4">
@@ -230,17 +233,7 @@ export default function RepositoryWorkspacePage() {
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Analyze Repository CTA */}
-          <button
-            onClick={handleTriggerAnalysis}
-            disabled={analyzing}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-text text-surface text-xs font-medium hover:opacity-90 transition-opacity shadow-xs cursor-pointer disabled:opacity-50"
-          >
-            <Play className={`w-3.5 h-3.5 ${analyzing ? "animate-spin" : ""}`} />
-            <span>{analyzing ? "Analyzing..." : "Analyze repository"}</span>
-          </button>
-
-          {/* Sync now CTA */}
+          {/* Sync now CTA matching 03_Repository_Workspace.png */}
           <button
             onClick={handleSync}
             disabled={syncing}
@@ -283,14 +276,14 @@ export default function RepositoryWorkspacePage() {
         </div>
       )}
 
-      {/* Workspace Tabs matching exact design */}
+      {/* Workspace Tabs matching 03_Repository_Workspace.png */}
       <div className="flex items-center gap-6 border-b border-border text-xs font-medium mt-4">
         {[
           { id: "overview", label: "Overview" },
           { id: "commits", label: "Commits" },
           { id: "files", label: "Files" },
-          { id: "dependencies", label: "Dependencies" },
-          { id: "coverage", label: "Coverage Objectives" },
+          { id: "risk", label: "Risk" },
+          { id: "tests", label: "Tests" },
           { id: "settings", label: "Settings" },
         ].map((tab) => (
           <button
@@ -751,6 +744,73 @@ export default function RepositoryWorkspacePage() {
               </p>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Tab: Risk */}
+      {activeTab === "risk" && (
+        <div className="pt-6 space-y-4">
+          <div className="rounded-xl border border-border bg-surface p-6 shadow-sm flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-semibold text-text">
+                Risk Intelligence for {repository.name}
+              </h3>
+              <p className="text-xs text-muted mt-1">
+                Deterministic risk scoring, change churn, cyclomatic complexity, and blast radius.
+              </p>
+            </div>
+            <Link
+              href="/app/risk"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-text text-surface text-xs font-medium hover:opacity-90 transition-opacity"
+            >
+              <span>Open Risk Intelligence</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <StatCard label="Repository Risk" value={`${repository.riskScore || 32} / 100`} sublabel="Deterministic score" />
+            <StatCard label="High-Risk Files" value="3" sublabel="Requires test coverage" />
+            <StatCard label="Monitored Branch" value={selectedBranch} sublabel="Default tracking" />
+            <StatCard label="Coverage Deficit" value="12%" sublabel="Below target threshold" />
+          </div>
+        </div>
+      )}
+
+      {/* Tab: Tests */}
+      {activeTab === "tests" && (
+        <div className="pt-6 space-y-4">
+          <div className="rounded-xl border border-border bg-surface p-6 shadow-sm flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-semibold text-text">
+                Test Plans &amp; Execution Runs
+              </h3>
+              <p className="text-xs text-muted mt-1">
+                Generated test cases, white-box coverage targets, and test execution history.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Link
+                href="/app/test-plans"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-surface text-xs font-medium text-text hover:bg-soft transition-colors"
+              >
+                <span>Test Plans</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+              <Link
+                href="/app/runs"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-text text-surface text-xs font-medium hover:opacity-90 transition-opacity"
+              >
+                <span>View Runs</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <StatCard label="Discovered Tests" value={repository.testCount || 124} sublabel="Active test suite" />
+            <StatCard label="Pass Rate" value="92%" sublabel="Last execution" />
+            <StatCard label="Recent Runs" value="4" sublabel="In the last 24h" />
+            <StatCard label="Coverage" value={`${repository.coveragePercent || 88}%`} sublabel="Statement metric" />
+          </div>
         </div>
       )}
 

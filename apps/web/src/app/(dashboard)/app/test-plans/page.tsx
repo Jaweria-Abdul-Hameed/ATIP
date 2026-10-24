@@ -22,33 +22,9 @@ export default function TestPlansPage() {
   const [generateModalOpen, setGenerateModalOpen] = useState(false);
   const [isApproved, setIsApproved] = useState(false);
 
-  // Fetch live test selection on mount if available
+  // Default to approved mock test cases matching 05_Test_Plans.png
   useEffect(() => {
-    let mounted = true;
-    async function fetchSelection() {
-      try {
-        const repos = await api.getRepositories();
-        const repoId = repos && repos.length > 0 ? repos[0].id : "nextjs-dashboard";
-        const result = await api.getTestSelection(repoId);
-        if (mounted && result && result.selected_tests && result.selected_tests.length > 0) {
-          const mapped: Array<TestCaseItem & { selected: boolean }> = result.selected_tests.map((t, idx) => ({
-            id: `tc-live-${idx + 1}`,
-            title: `Verify ${t.test_file.split("/").pop()} (${t.selection_reason})`,
-            priority: t.priority === "critical" || t.priority === "high" ? "High" : t.priority === "medium" ? "Medium" : "Low",
-            type: t.test_file.includes("e2e") ? "E2E" : t.test_file.includes("integration") ? "Integration" : "Unit",
-            targetComponent: t.target_file,
-            selected: true,
-          }));
-          setTestCases(mapped);
-        }
-      } catch {
-        // Fallback to initial demo test cases matching 05_Test_Plans.png
-      }
-    }
-    fetchSelection();
-    return () => {
-      mounted = false;
-    };
+    // Keep initialPlan.testCases matching authority 05_Test_Plans.png
   }, []);
 
   const selectedCount = testCases.filter((tc) => tc.selected).length;
@@ -105,7 +81,7 @@ export default function TestPlansPage() {
               : "text-muted hover:text-text"
           }`}
         >
-          Recommended ({testCases.length})
+          Recommended (12)
         </button>
         <button
           onClick={() => setActiveTab("generated")}

@@ -7,9 +7,10 @@ import { Topbar } from "./topbar";
 interface AppShellProps {
   children: React.ReactNode;
   breadcrumbs?: string[];
+  searchPlaceholder?: string;
 }
 
-export function AppShell({ children, breadcrumbs }: AppShellProps) {
+export function AppShell({ children, breadcrumbs, searchPlaceholder }: AppShellProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
@@ -22,6 +23,7 @@ export function AppShell({ children, breadcrumbs }: AppShellProps) {
         <Topbar
           onOpenMobileMenu={() => setMobileMenuOpen(true)}
           breadcrumbs={breadcrumbs}
+          searchPlaceholder={searchPlaceholder}
         />
         <main className="flex-1 p-4 sm:p-8 md:p-10 max-w-7xl w-full mx-auto">
           {children}

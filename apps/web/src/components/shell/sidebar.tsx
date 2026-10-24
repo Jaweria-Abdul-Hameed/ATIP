@@ -7,10 +7,8 @@ import {
   LayoutDashboard,
   FolderGit2,
   AlertTriangle,
-  Target,
   FileText,
   PlaySquare,
-  Sparkles,
   BarChart3,
   Settings,
   X,
@@ -27,14 +25,13 @@ interface SidebarProps {
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
 
+  // Exactly matching the 6 navigation items in ATIP_APPROVED_SIX_SCREEN_REFERENCE.png
   const navItems = [
     { label: "Overview", href: "/app", icon: LayoutDashboard },
     { label: "Repositories", href: "/app/repositories", icon: FolderGit2 },
     { label: "Risk Intelligence", href: "/app/risk", icon: AlertTriangle },
-    { label: "White-Box Coverage", href: "/app/coverage", icon: Target },
     { label: "Test Plans", href: "/app/test-plans", icon: FileText },
     { label: "Test Runs", href: "/app/runs", icon: PlaySquare },
-    { label: "AI Analysis", href: "/app/analysis", icon: Sparkles },
     { label: "Reports", href: "/app/reports", icon: BarChart3 },
   ];
 
@@ -87,7 +84,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           )}
         </div>
 
-        {/* Main Navigation */}
+        {/* Main Navigation matching approved mockups */}
         <nav className="flex-1 space-y-1 px-3 py-2 overflow-y-auto">
           {navItems.map((item) => {
             const active = isActive(item.href);
@@ -132,7 +129,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
             <span>Settings</span>
           </Link>
 
-          {/* Profile Card matching exact mockup: J / Jaweria / Personal Workspace with interactive dropdown */}
+          {/* Profile Card matching exact mockup: J / Jaweria / Personal Workspace */}
           <ProfilePopover variant="sidebar" onCloseParent={onClose} />
         </div>
       </aside>
