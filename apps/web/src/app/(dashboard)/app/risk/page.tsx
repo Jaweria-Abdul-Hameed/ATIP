@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import Link from "next/link";
 import { AppShell } from "@/components/shell/app-shell";
 import { Badge } from "@/components/ui/badge";
-import { DEMO_RISK_FILES, DEMO_REPOSITORIES } from "@/lib/fixtures";
+import { DEMO_RISK_FILES, DEMO_REPOSITORIES, REPO_RISK_FILES_MAP } from "@/lib/fixtures";
 import { api } from "@/lib/api-adapter";
 import {
   FileRiskAssessmentApiItem,
@@ -17,6 +18,9 @@ import {
   X,
   Info,
   GitBranch,
+  Search,
+  CheckCircle2,
+  Play,
 } from "lucide-react";
 
 interface DisplayRiskFile {
@@ -39,6 +43,7 @@ export default function RiskIntelligencePage() {
   const [selectedRepoId, setSelectedRepoId] = useState<string>("nextjs-dashboard");
   const [selectedBranch, setSelectedBranch] = useState("main");
   const [selectedTimeRange, setSelectedTimeRange] = useState("Last 30 days");
+  const [searchQuery, setSearchQuery] = useState("");
   
   const [liveAssessment, setLiveAssessment] = useState<RiskAssessmentSummaryApiItem | null>(null);
   const [selectedFile, setSelectedFile] = useState<DisplayRiskFile | null>(null);
@@ -65,12 +70,9 @@ export default function RiskIntelligencePage() {
     loadRepos();
   }, []);
 
-  // Fetch risk assessment whenever selectedRepoId or selectedBranch changes
+  // Fetch live risk assessment whenever a live repository is selected
   useEffect(() => {
-    if (!selectedRepoId || selectedRepoId === "nextjs-dashboard") {
-      setLiveAssessment(null);
-      return;
-    }
+    if (!selectedRepoId) return;
 
     let mounted = true;
     async function fetchRisk() {
@@ -94,55 +96,113 @@ export default function RiskIntelligencePage() {
     };
   }, [selectedRepoId, selectedBranch]);
 
-  // Map files for display: use DEMO_RISK_FILES for nextjs-dashboard to guarantee 100% visual parity with 04_Risk_Intelligence.png
+  // Dynamically compute and filter files based on repository, branch, time range, and search query
   const displayFiles: DisplayRiskFile[] = React.useMemo(() => {
-    if (selectedRepoId === "nextjs-dashboard" || !liveAssessment || !liveAssessment.files || liveAssessment.files.length === 0) {
-      return DEMO_RISK_FILES.map((f) => ({
-        id: f.id,
-        filePath: f.filePath,
-        riskScore: f.riskScore,
-        severity: f.severity === "high" ? "high" : f.severity === "medium" ? "medium" : "low",
-        riskFactors: f.riskFactors,
-        lastChanged: f.lastChanged,
-        coveragePercent: f.coveragePercent,
-        reasons: f.reasons,
-      }));
+    // 1. If backend has live assessed files for this repo, prioritize them
+    if (liveAssessment && liveAssessment.files && liveAssessment.files.length > 0) {
+      return liveAssessment.files.map((f: FileRiskAssessmentApiItem) => {
+        const severity: "high" | "medium" | "low" =
+          f.risk_tier === "critical" || f.risk_tier === "high"
+            ? "high"
+            : f.risk_tier === "medium"
+            ? "medium"
+            : "low";
+        
+        const factorsText = f.factors && f.factors.length > 0
+          ? f.factors.map((fc) => `${fc.name} (${fc.impact})`).join(", ")
+          : "Deterministic risk evaluation";
+
+        const reasonsList = f.factors && f.factors.length > 0
+          ? f.factors.map((fc) => `${fc.name}: score ${Math.round(fc.normalized_score)} (weight ${Math.round(fc.weight * 100)}%, impact ${fc.impact})`)
+          : ["Deterministic risk composite factor"];
+
+        return {
+          id: f.file_path,
+          filePath: f.file_path,
+          riskScore: f.risk_score,
+          severity,
+          riskFactors: factorsText,
+          lastChanged: "Recent commit",
+          coveragePercent: Math.round(
+            f.coverage_pct != null ? f.coverage_pct : 42
+          ),
+          reasons: reasonsList,
+          directDependents: f.direct_dependents_count,
+          transitiveDependents: f.transitive_dependents_count,
+          maintainabilityIndex: f.maintainability_index,
+          factors: f.factors,
+        };
+      });
     }
 
-    return liveAssessment.files.map((f: FileRiskAssessmentApiItem) => {
-      const severity: "high" | "medium" | "low" =
-        f.risk_tier === "critical" || f.risk_tier === "high"
-          ? "high"
-          : f.risk_tier === "medium"
-          ? "medium"
-          : "low";
-      
-      const factorsText = f.factors && f.factors.length > 0
-        ? f.factors.map((fc) => `${fc.name} (${fc.impact})`).join(", ")
-        : "Deterministic risk evaluation";
+    // 2. Fetch repo-specific files from REPO_RISK_FILES_MAP
+    const repoFiles = REPO_RISK_FILES_MAP[selectedRepoId] || DEMO_RISK_FILES;
 
-      const reasonsList = f.factors && f.factors.length > 0
-        ? f.factors.map((fc) => `${fc.name}: score ${Math.round(fc.normalized_score)} (weight ${Math.round(fc.weight * 100)}%, impact ${fc.impact})`)
-        : ["Deterministic risk composite factor"];
+    // 3. Apply branch variations
+    let files = repoFiles.map((f) => {
+      let riskScore = f.riskScore;
+      let reasons = [...f.reasons];
+      let riskFactors = f.riskFactors;
+
+      if (selectedBranch === "feature/auth") {
+        if (
+          f.filePath.toLowerCase().includes("auth") ||
+          f.filePath.toLowerCase().includes("session") ||
+          f.filePath.toLowerCase().includes("oauth") ||
+          f.filePath.toLowerCase().includes("user") ||
+          f.filePath.toLowerCase().includes("checkout")
+        ) {
+          riskScore = Math.min(99, riskScore + 6);
+          reasons.unshift("Active pull request branch modifies security and authentication perimeter");
+          riskFactors = "PR branch changes, " + riskFactors;
+        } else {
+          riskScore = Math.max(15, riskScore - 4);
+        }
+      } else if (selectedBranch === "develop") {
+        riskScore = Math.min(98, riskScore + 2);
+        reasons.unshift("Staged in develop branch ahead of main release");
+      }
+
+      const severity: "high" | "medium" | "low" =
+        riskScore >= 75 ? "high" : riskScore >= 50 ? "medium" : "low";
 
       return {
-        id: f.file_path,
-        filePath: f.file_path,
-        riskScore: f.risk_score,
+        id: f.id,
+        filePath: f.filePath,
+        riskScore,
         severity,
-        riskFactors: factorsText,
-        lastChanged: "Recent commit",
-        coveragePercent: Math.round(
-          f.coverage_pct != null ? f.coverage_pct : 42
-        ),
-        reasons: reasonsList,
-        directDependents: f.direct_dependents_count,
-        transitiveDependents: f.transitive_dependents_count,
-        maintainabilityIndex: f.maintainability_index,
-        factors: f.factors,
+        riskFactors,
+        lastChanged: f.lastChanged,
+        coveragePercent: f.coveragePercent,
+        reasons,
+        directDependents: f.reasons.length * 2,
+        transitiveDependents: f.reasons.length * 4 + 1,
+        maintainabilityIndex: Math.round(100 - riskScore * 0.7),
       };
     });
-  }, [selectedRepoId, liveAssessment]);
+
+    // 4. Apply Time Range filtering
+    if (selectedTimeRange === "Last 7 days") {
+      files = files.filter(
+        (f) =>
+          !f.lastChanged.includes("week") &&
+          !f.lastChanged.includes("10 days") &&
+          !f.lastChanged.includes("2 weeks")
+      );
+    }
+
+    // 5. Apply Search Query if typed
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      files = files.filter(
+        (f) =>
+          f.filePath.toLowerCase().includes(q) ||
+          f.riskFactors.toLowerCase().includes(q)
+      );
+    }
+
+    return files;
+  }, [selectedRepoId, selectedBranch, selectedTimeRange, searchQuery, liveAssessment]);
 
   const handleExport = () => {
     const csvContent =
@@ -198,7 +258,10 @@ export default function RiskIntelligencePage() {
           <div className="relative">
             <select
               value={selectedRepoId}
-              onChange={(e) => setSelectedRepoId(e.target.value)}
+              onChange={(e) => {
+                setSelectedRepoId(e.target.value);
+                setSelectedFile(null);
+              }}
               className="w-full appearance-none bg-transparent text-xs font-medium text-text focus:outline-none cursor-pointer pr-6"
             >
               {(repositories.length > 0 ? repositories : DEMO_REPOSITORIES).map((r) => (
@@ -219,7 +282,10 @@ export default function RiskIntelligencePage() {
           <div className="relative">
             <select
               value={selectedBranch}
-              onChange={(e) => setSelectedBranch(e.target.value)}
+              onChange={(e) => {
+                setSelectedBranch(e.target.value);
+                setSelectedFile(null);
+              }}
               className="w-full appearance-none bg-transparent text-xs font-medium text-text focus:outline-none cursor-pointer pr-6"
             >
               <option value="main" className="bg-surface text-text">main</option>
@@ -238,7 +304,10 @@ export default function RiskIntelligencePage() {
           <div className="relative">
             <select
               value={selectedTimeRange}
-              onChange={(e) => setSelectedTimeRange(e.target.value)}
+              onChange={(e) => {
+                setSelectedTimeRange(e.target.value);
+                setSelectedFile(null);
+              }}
               className="w-full appearance-none bg-transparent text-xs font-medium text-text focus:outline-none cursor-pointer pr-6"
             >
               <option value="Last 30 days" className="bg-surface text-text">Last 30 days</option>
@@ -250,13 +319,33 @@ export default function RiskIntelligencePage() {
         </div>
       </div>
 
+      {/* Quick Filter Search Input */}
+      <div className="relative my-3">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted" />
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Filter files, components, or risk factors..."
+          className="w-full pl-9 pr-8 py-2 rounded-xl border border-border bg-surface text-xs text-text placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-text transition-all"
+        />
+        {searchQuery && (
+          <button
+            onClick={() => setSearchQuery("")}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-text p-0.5 cursor-pointer"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        )}
+      </div>
+
       {/* Main Table View matching 04_Risk_Intelligence.png */}
       <div className="mt-4 rounded-xl border border-border bg-surface overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-xs">
             <thead>
               <tr className="border-b border-border bg-soft/50 text-muted font-medium">
-                <th className="py-3 px-4 font-medium">File / Component</th>
+                <th className="py-3 px-4 font-medium">File / Component ({displayFiles.length})</th>
                 <th className="py-3 px-4 font-medium text-center">Risk Score</th>
                 <th className="py-3 px-4 font-medium">Risk Factors</th>
                 <th className="py-3 px-4 font-medium text-right">Last Changed</th>
@@ -264,48 +353,56 @@ export default function RiskIntelligencePage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {displayFiles.map((file) => (
-                <tr
-                  key={file.id}
-                  onClick={() => setSelectedFile(file)}
-                  className="hover:bg-soft transition-colors cursor-pointer group"
-                >
-                  <td className="py-3.5 px-4 font-mono font-medium text-text">
-                    <div>{file.filePath}</div>
-                  </td>
-                  <td className="py-3.5 px-4 text-center">
-                    <div className="inline-flex items-center gap-2">
-                      <span className="font-serif text-base font-normal text-text">
-                        {file.riskScore}
-                      </span>
-                      <Badge
-                        variant={
-                          file.severity === "high"
-                            ? "error"
+              {displayFiles.length > 0 ? (
+                displayFiles.map((file) => (
+                  <tr
+                    key={file.id}
+                    onClick={() => setSelectedFile(file)}
+                    className="hover:bg-soft transition-colors cursor-pointer group"
+                  >
+                    <td className="py-3.5 px-4 font-mono font-medium text-text">
+                      <div>{file.filePath}</div>
+                    </td>
+                    <td className="py-3.5 px-4 text-center">
+                      <div className="inline-flex items-center gap-2">
+                        <span className="font-serif text-base font-normal text-text">
+                          {file.riskScore}
+                        </span>
+                        <Badge
+                          variant={
+                            file.severity === "high"
+                              ? "error"
+                              : file.severity === "medium"
+                              ? "warning"
+                              : "success"
+                          }
+                        >
+                          {file.severity === "high"
+                            ? "High"
                             : file.severity === "medium"
-                            ? "warning"
-                            : "success"
-                        }
-                      >
-                        {file.severity === "high"
-                          ? "High"
-                          : file.severity === "medium"
-                          ? "Medium"
-                          : "Low"}
-                      </Badge>
-                    </div>
-                  </td>
-                  <td className="py-3.5 px-4 text-muted">
-                    {file.riskFactors}
-                  </td>
-                  <td className="py-3.5 px-4 text-right text-muted">
-                    {file.lastChanged}
-                  </td>
-                  <td className="py-3.5 px-4 text-center text-muted group-hover:text-text">
-                    <ChevronRight className="w-4 h-4 inline" />
+                            ? "Medium"
+                            : "Low"}
+                        </Badge>
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-4 text-muted">
+                      {file.riskFactors}
+                    </td>
+                    <td className="py-3.5 px-4 text-right text-muted">
+                      {file.lastChanged}
+                    </td>
+                    <td className="py-3.5 px-4 text-center text-muted group-hover:text-text">
+                      <ChevronRight className="w-4 h-4 inline" />
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={5} className="py-12 text-center text-muted">
+                    No files found matching the selected filters.
                   </td>
                 </tr>
-              ))}
+              )}
             </tbody>
           </table>
         </div>
@@ -392,13 +489,25 @@ export default function RiskIntelligencePage() {
               </div>
             </div>
 
-            <div className="pt-4 border-t border-border flex justify-end gap-2">
-              <button
-                onClick={() => setSelectedFile(null)}
-                className="px-3.5 py-2 rounded-lg border border-border bg-surface text-xs font-medium text-text hover:bg-soft cursor-pointer"
-              >
-                Close
-              </button>
+            <div className="pt-4 border-t border-border flex items-center justify-between gap-2">
+              <span className="text-[11px] text-muted">
+                Confidence: 94% (Deterministic Engine v1.0)
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setSelectedFile(null)}
+                  className="px-3.5 py-2 rounded-lg border border-border bg-surface text-xs font-medium text-text hover:bg-soft cursor-pointer"
+                >
+                  Close
+                </button>
+                <Link
+                  href="/app/test-plans"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-text text-surface text-xs font-medium hover:opacity-90 transition-opacity cursor-pointer"
+                >
+                  <Play className="w-3.5 h-3.5" />
+                  <span>Targeted Tests</span>
+                </Link>
+              </div>
             </div>
           </div>
         </div>

@@ -101,7 +101,7 @@
 - [ ] **M5-05** Build language/tool capability matrix, `UNKNOWN`/`UNSUPPORTED`/`PROVEN_INFEASIBLE` statuses, honest reachability proofs and evidence contracts; never equate static discovery with coverage.
 - [ ] **M5-06** Persist objective records and expose tenant-scoped analysis/objective/gap APIs; validate Python and JS/TS nested Boolean/short-circuit, loop, exception, def-use fixtures.
 
-**Exit gate:** All tasks verified with runnable fixture/integration evidence; unsupported capabilities disclosed and never misreported as covered; tests/build/security pass; status and Git commit updated.
+**Exit gate:** All tasks verified with runnable fixture/integration evidence; unsupported capabilities disclosed and never misreported as covered; tests/build/security pass; status and Git commit updated. All the relevant ui works. In doing so, no current ui functionality should be broken.
 
 ---
 
