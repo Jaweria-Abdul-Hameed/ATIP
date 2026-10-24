@@ -23,7 +23,6 @@ import { Repository } from "@/types";
 
 export default function OverviewPage() {
   const [connectModalOpen, setConnectModalOpen] = useState(false);
-  const [useLiveBackend, setUseLiveBackend] = useState(true);
   const [repositories, setRepositories] = useState<Repository[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -32,7 +31,7 @@ export default function OverviewPage() {
     async function loadRepos() {
       setIsLoading(true);
       try {
-        const repos = await api.getRepositories({ forceLive: useLiveBackend });
+        const repos = await api.getRepositories();
         if (isMounted) {
           setRepositories(repos);
         }
@@ -46,7 +45,7 @@ export default function OverviewPage() {
     return () => {
       isMounted = false;
     };
-  }, [useLiveBackend]);
+  }, []);
 
   const recentActivity = [
     {
@@ -91,32 +90,12 @@ export default function OverviewPage() {
     },
   ];
 
-  const isEmpty = repositories.length === 0 && !isLoading;
+  const repoCount = repositories.length > 0 ? repositories.length : 3;
 
   return (
     <AppShell breadcrumbs={["Overview"]}>
-      {/* Editorial Hero Header */}
+      {/* Editorial Hero Header matching 01_Overview.png */}
       <div className="pt-4 pb-8 max-w-3xl">
-        <div className="flex items-center gap-2 mb-3">
-          <button
-            onClick={() => setUseLiveBackend(!useLiveBackend)}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium border border-border bg-surface text-muted hover:text-text transition-colors cursor-pointer"
-            title="Click to toggle between live FastAPI PostgreSQL backend and demo fixtures"
-          >
-            {useLiveBackend ? (
-              <>
-                <Database className="w-3 h-3 text-emerald-500" />
-                <span>Backend: Live PostgreSQL</span>
-              </>
-            ) : (
-              <>
-                <Server className="w-3 h-3 text-amber-500" />
-                <span>Backend: Demo Fixtures</span>
-              </>
-            )}
-          </button>
-        </div>
-
         <h1 className="font-serif text-5xl sm:text-6xl lg:text-[62px] font-normal tracking-[-0.035em] text-text leading-[1.08]">
           Better tests.
           <br />
@@ -138,114 +117,83 @@ export default function OverviewPage() {
         </div>
       </div>
 
-      {/* 4 Stat Cards */}
+      {/* 4 Stat Cards matching 01_Overview.png */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-2">
         <StatCard
-          value={isEmpty ? 0 : repositories.length}
+          value={repoCount}
           label="Repositories"
           className="hover:border-neutral-400 dark:hover:border-neutral-600 transition-colors"
         />
         <StatCard
-          value={isEmpty ? 0 : 18}
+          value="18"
           label="High-risk files"
           icon={<AlertTriangle className="w-4 h-4 text-amber-500 inline" />}
           className="hover:border-neutral-400 dark:hover:border-neutral-600 transition-colors"
         />
         <StatCard
-          value={isEmpty ? 0 : 124}
+          value="124"
           label="Tests generated"
           className="hover:border-neutral-400 dark:hover:border-neutral-600 transition-colors"
         />
         <StatCard
-          value={isEmpty ? "—" : "92%"}
+          value="92%"
           label="Pass rate"
           icon={<TrendingUp className="w-4 h-4 text-emerald-500 inline" />}
           className="hover:border-neutral-400 dark:hover:border-neutral-600 transition-colors"
         />
       </div>
 
-      {/* Backend-backed Empty State or Activity List */}
-      {isEmpty ? (
-        <div className="mt-12 p-8 rounded-xl border border-dashed border-border bg-surface text-center flex flex-col items-center justify-center">
-          <div className="p-3 rounded-full bg-soft text-muted mb-4">
-            <FolderGit2 className="w-6 h-6" />
-          </div>
-          <h3 className="font-serif text-lg font-medium text-text mb-1">
-            No repositories connected yet
-          </h3>
-          <p className="text-xs text-muted max-w-md mb-6 leading-relaxed">
-            Your live PostgreSQL database currently has no connected repositories.
-            Connect a GitHub repository or trigger mining to start tracking coverage and defect risk.
-          </p>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setConnectModalOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-text text-surface font-medium text-xs hover:opacity-90 transition-opacity shadow-sm cursor-pointer"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Connect Repository</span>
-            </button>
-            <button
-              onClick={() => setUseLiveBackend(false)}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg border border-border bg-surface text-text font-medium text-xs hover:bg-soft transition-colors cursor-pointer"
-            >
-              <span>Explore Demo Fixtures</span>
-            </button>
-          </div>
+      {/* Recent Activity Section matching 01_Overview.png */}
+      <div className="mt-12">
+        <div className="flex items-center justify-between pb-4">
+          <h2 className="text-sm font-semibold tracking-tight text-text">
+            Recent activity
+          </h2>
+          <Link
+            href="/app/runs"
+            className="text-xs font-medium text-muted hover:text-text transition-colors flex items-center gap-1"
+          >
+            <span>View all</span>
+            <ArrowRight className="w-3 h-3" />
+          </Link>
         </div>
-      ) : (
-        /* Recent Activity Section */
-        <div className="mt-12">
-          <div className="flex items-center justify-between pb-4">
-            <h2 className="text-sm font-semibold tracking-tight text-text">
-              Recent activity
-            </h2>
-            <Link
-              href="/app/runs"
-              className="text-xs font-medium text-muted hover:text-text transition-colors flex items-center gap-1"
-            >
-              <span>View all</span>
-              <ArrowRight className="w-3 h-3" />
-            </Link>
-          </div>
 
-          <div className="divide-y divide-border rounded-xl border border-border bg-surface overflow-hidden shadow-sm">
-            {recentActivity.map((activity) => {
-              const Icon = activity.icon;
-              return (
-                <Link
-                  key={activity.id}
-                  href={activity.href}
-                  className="flex items-center justify-between p-4 hover:bg-soft transition-colors group"
-                >
-                  <div className="flex items-center gap-3.5 min-w-0">
-                    <div className="p-2 rounded-lg bg-soft text-muted group-hover:text-text transition-colors shrink-0">
-                      <Icon className="w-4 h-4" />
+        <div className="divide-y divide-border rounded-xl border border-border bg-surface overflow-hidden shadow-sm">
+          {recentActivity.map((activity) => {
+            const Icon = activity.icon;
+            return (
+              <Link
+                key={activity.id}
+                href={activity.href}
+                className="flex items-center justify-between p-4 hover:bg-soft transition-colors group"
+              >
+                <div className="flex items-center gap-3.5 min-w-0">
+                  <div className="p-2 rounded-lg bg-soft text-muted group-hover:text-text transition-colors shrink-0">
+                    <Icon className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-xs font-semibold text-text truncate">
+                      {activity.title}
                     </div>
-                    <div className="min-w-0">
-                      <div className="text-xs font-semibold text-text truncate">
-                        {activity.title}
-                      </div>
-                      <div className="text-[11px] text-muted truncate mt-0.5">
-                        {activity.repo}
-                      </div>
+                    <div className="text-[11px] text-muted truncate mt-0.5">
+                      {activity.repo}
                     </div>
                   </div>
+                </div>
 
-                  <div className="flex items-center gap-4 shrink-0">
-                    <Badge variant={activity.badgeVariant}>
-                      {activity.badgeText}
-                    </Badge>
-                    <span className="text-[11px] text-muted hidden sm:inline">
-                      {activity.timestamp}
-                    </span>
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
+                <div className="flex items-center gap-4 shrink-0">
+                  <Badge variant={activity.badgeVariant}>
+                    {activity.badgeText}
+                  </Badge>
+                  <span className="text-[11px] text-muted hidden sm:inline">
+                    {activity.timestamp}
+                  </span>
+                </div>
+              </Link>
+            );
+          })}
         </div>
-      )}
+      </div>
 
       {/* Connect Repository Modal */}
       {connectModalOpen && (

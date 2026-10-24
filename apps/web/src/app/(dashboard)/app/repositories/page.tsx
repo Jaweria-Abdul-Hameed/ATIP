@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { AppShell } from "@/components/shell/app-shell";
 import { Badge } from "@/components/ui/badge";
+import { DEMO_REPOSITORIES } from "@/lib/fixtures";
 import { api } from "@/lib/api-adapter";
 import { DiscoveredRepositoryApiItem } from "@/lib/api-client";
 import { Repository } from "@/types";
@@ -35,7 +36,6 @@ export default function RepositoriesPage() {
     "lastSynced"
   );
   const [showConnectModal, setShowConnectModal] = useState(false);
-  const [useLiveBackend, setUseLiveBackend] = useState(true);
   const [repositories, setRepositories] = useState<Repository[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [discoveredRepos, setDiscoveredRepos] = useState<DiscoveredRepositoryApiItem[]>([]);
@@ -192,7 +192,7 @@ export default function RepositoriesPage() {
     async function loadRepos() {
       setIsLoading(true);
       try {
-        const repos = await api.getRepositories({ forceLive: useLiveBackend });
+        const repos = await api.getRepositories();
         if (isMounted) {
           setRepositories(repos);
         }
@@ -206,9 +206,11 @@ export default function RepositoriesPage() {
     return () => {
       isMounted = false;
     };
-  }, [useLiveBackend]);
+  }, []);
 
-  const filteredRepos = repositories.filter((repo) => {
+  const displayRepos = repositories.length > 0 ? repositories : DEMO_REPOSITORIES;
+
+  const filteredRepos = displayRepos.filter((repo) => {
     const matchesSearch =
       repo.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       repo.fullName.toLowerCase().includes(searchQuery.toLowerCase());
@@ -223,30 +225,11 @@ export default function RepositoriesPage() {
       {/* Header matching 02_Repositories.png */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-2 pb-6">
         <div>
-          <div className="flex items-center gap-2 mb-2">
-            <button
-              onClick={() => setUseLiveBackend(!useLiveBackend)}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium border border-border bg-surface text-muted hover:text-text transition-colors cursor-pointer"
-              title="Click to toggle between live FastAPI PostgreSQL backend and demo fixtures"
-            >
-              {useLiveBackend ? (
-                <>
-                  <Database className="w-3 h-3 text-emerald-500" />
-                  <span>Backend: Live PostgreSQL</span>
-                </>
-              ) : (
-                <>
-                  <Server className="w-3 h-3 text-amber-500" />
-                  <span>Backend: Demo Fixtures</span>
-                </>
-              )}
-            </button>
-          </div>
           <h1 className="font-serif text-3xl sm:text-4xl font-normal tracking-tight text-text">
             Repositories
           </h1>
           <p className="mt-1 text-xs sm:text-sm text-muted">
-            Connect and manage your GitHub repositories.
+            Manage connected codebases and test coverage configurations.
           </p>
         </div>
 
@@ -324,37 +307,9 @@ export default function RepositoriesPage() {
         </div>
       </div>
 
-      {/* Repository Cards List or Empty State */}
+      {/* Repository Cards List matching 02_Repositories.png */}
       <div className="space-y-3">
-        {repositories.length === 0 && !isLoading ? (
-          <div className="text-center py-16 px-6 rounded-xl border border-dashed border-border bg-surface flex flex-col items-center justify-center">
-            <div className="p-3 rounded-full bg-soft text-muted mb-4">
-              <FolderGit2 className="w-6 h-6" />
-            </div>
-            <h3 className="font-serif text-lg font-medium text-text mb-1">
-              No repositories connected yet
-            </h3>
-            <p className="text-xs text-muted max-w-sm mb-6 leading-relaxed">
-              Your PostgreSQL database has no repository records. Connect a repository
-              or explore our demo fixtures to preview intelligence features.
-            </p>
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => setShowConnectModal(true)}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-text text-surface font-medium text-xs hover:opacity-90 transition-opacity shadow-sm cursor-pointer"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Connect Repository</span>
-              </button>
-              <button
-                onClick={() => setUseLiveBackend(false)}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg border border-border bg-surface text-text font-medium text-xs hover:bg-soft transition-colors cursor-pointer"
-              >
-                <span>Explore Demo Repositories</span>
-              </button>
-            </div>
-          </div>
-        ) : filteredRepos.length === 0 && !isLoading ? (
+        {filteredRepos.length === 0 ? (
           <div className="text-center py-12 rounded-xl border border-border bg-surface text-muted text-xs">
             No repositories found matching &quot;{searchQuery}&quot;.
           </div>
